@@ -1,0 +1,63 @@
+import { Ionicons } from '@expo/vector-icons';
+import { PropsWithChildren, useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
+
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Spacing } from '@/constants/theme';
+
+export function Collapsible({
+  children,
+  title,
+}: PropsWithChildren<{ title: string }>) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <ThemedView>
+      <Pressable
+        style={({ pressed }) => [
+          styles.heading,
+          pressed && styles.pressedHeading,
+        ]}
+        onPress={() => setIsOpen((value) => !value)}
+      >
+        <Ionicons
+          name={isOpen ? 'chevron-down' : 'chevron-forward'}
+          size={16}
+          color="#111827"
+        />
+
+        <ThemedText type="small">{title}</ThemedText>
+      </Pressable>
+
+      {isOpen && (
+        <Animated.View entering={FadeIn.duration(200)}>
+          <ThemedView
+            type="backgroundElement"
+            style={styles.content}
+          >
+            {children}
+          </ThemedView>
+        </Animated.View>
+      )}
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  heading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  pressedHeading: {
+    opacity: 0.7,
+  },
+  content: {
+    marginTop: Spacing.three,
+    borderRadius: Spacing.three,
+    marginLeft: Spacing.four,
+    padding: Spacing.four,
+  },
+});
