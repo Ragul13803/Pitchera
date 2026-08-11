@@ -15,7 +15,7 @@ export default function AppLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen
-        name="index"
+        name="dashboard"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
@@ -27,20 +27,6 @@ export default function AppLayout() {
           ),
         }}
       />
-
-      {/* <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons
-              name="search-outline"
-              size={size}
-              color={color}
-            />
-          ),
-        }}
-      /> */}
 
       <Tabs.Screen
         name="applied-jobs"

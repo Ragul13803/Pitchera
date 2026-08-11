@@ -27,6 +27,7 @@ export function AppShell({ children }: AppShellProps) {
         <View style={styles.main}>
           <TopBar />
 
+          {/* Content Card */}
           <View style={styles.content}>
             {children}
           </View>
@@ -56,6 +57,19 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
+
     minWidth: 0,
+
+    marginRight: 10,
+    marginBottom: 10,
+
+    backgroundColor: '#FFFFFF',
+
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+
+    borderRadius: 10,
+
+    overflow: 'hidden',
   },
 });

@@ -74,12 +74,20 @@ const styles = StyleSheet.create({
 
     backgroundColor: '#FFFFFF',
 
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+
+    borderRadius: 10,
+
+    marginVertical: 10,
+    marginRight: 10,
 
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+
+    // Makes the background/border respect the rounded corners
+    overflow: 'hidden',
   },
 
   title: {
