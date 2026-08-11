@@ -5,19 +5,6 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 
-// Routes
-app.get("/", (req, res) => {
-  res.json({
-    message: "Pitchera Working Fine!!",
-  });
-});
-
-app.get("/health", (req, res) => {
-  res.json({
-    message: "Pitchera Service is Running!!",
-  });
-});
-
 async function start(): Promise<void> {
   // Ensure upload directories exist
   const uploadDirs = ["resumes", "photos", "attachments"].map((dir) =>
@@ -34,7 +21,7 @@ async function start(): Promise<void> {
   await testConnection();
 
   app.listen(env.port, "0.0.0.0", () => {
-    console.log(`🚀 Pitchera API running on port ${env.port}`);
+    console.log(`🚀 Pitchera API running on port http://localhost:${env.port}`);
     console.log(`📍 Environment: ${env.nodeEnv}`);
     console.log(`🌐 Frontend URL: ${env.frontendUrl}`);
 

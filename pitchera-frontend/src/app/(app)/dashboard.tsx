@@ -1,3 +1,5 @@
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import {
   ScrollView,
   StyleSheet,
@@ -16,6 +18,10 @@ export default function Dashboard() {
 
       <View style={styles.card}>
         <Text>Dashboard content goes here</Text>
+        <Button title={'Refresh '} onPress={function (): void {
+          throw new Error('Function not implemented.');
+        } } />
+        <Input />
       </View>
     </ScrollView>
   );

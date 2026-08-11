@@ -68,9 +68,19 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Static files (uploads)
 app.use("/uploads", express.static(path.join(process.cwd(), env.uploadDir)));
 
-// Health check
+// Routes
+app.get("/", (req, res) => {
+  res.json({
+    message: "Pitchera Working Fine!!",
+  });
+});
+
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  res.json({
+    message: "Pitchera Service is Running!!",
+    status: "OK", 
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Routes
