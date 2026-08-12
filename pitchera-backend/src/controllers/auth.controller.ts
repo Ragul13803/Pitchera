@@ -3,7 +3,6 @@ import { z } from "zod";
 import * as authService from "../services/auth.service";
 import * as googleService from "../services/google.service";
 import { sendSuccess, sendError } from "../utils/response";
-import { AuthRequest } from "../middleware/auth.middleware";
 import { env } from "../config/env";
 
 const registerSchema = z.object({
@@ -20,6 +19,10 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email().toLowerCase(),
   password: z.string().min(1),
+});
+
+const googleMobileSchema = z.object({
+  idToken: z.string().min(1, "ID token is required"),
 });
 
 export async function register(
@@ -103,9 +106,7 @@ export async function googleCallback(
     const { code, error } = req.query;
 
     if (error || !code) {
-      res.redirect(
-        `${env.frontendUrl}/login?error=google_auth_failed`
-      );
+      res.redirect(`${env.frontendUrl}/login?error=google_auth_failed`);
       return;
     }
 
@@ -123,13 +124,100 @@ export async function googleCallback(
   }
 }
 
-export async function getMe(
-  req: AuthRequest,
+// Mobile Google authentication
+export async function googleMobileAuth(
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
-    // const { RowDataPacket } = await import("mysql2");
+    const { idToken } = googleMobileSchema.parse(req.body);
+
+    // Verify the Google ID token
+    const googleUser = await googleService.verifyGoogleIdToken(idToken);
+
+    // Find or create user
+    const result = await authService.findOrCreateGoogleUser({
+      googleId: googleUser.googleId,
+      email: googleUser.email,
+      firstName: googleUser.firstName,
+      lastName: googleUser.lastName,
+      avatarUrl: googleUser.avatarUrl,
+    });
+
+    sendSuccess(res, result, "Google authentication successful");
+  } catch (error: any) {
+    console.error("Google mobile auth error:", error);
+
+    if (error.message?.includes("Invalid Google ID token")) {
+      sendError(res, "Invalid Google authentication token", 401);
+    } else {
+      next(error);
+    }
+  }
+}
+
+// Verify token
+export async function verifyToken(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      sendError(res, "User not authenticated", 401);
+      return;
+    }
+
+    const pool = (await import("../database/db")).default;
+
+    const [users] = await pool.query<any[]>(
+      `SELECT u.id, u.first_name, u.last_name, u.email, u.avatar_url,
+              u.is_email_verified, u.is_active,
+              p.profile_photo_url, p.current_job_title
+       FROM users u
+       LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE u.id = ?`,
+      [req.user.userId]
+    );
+
+    if (users.length === 0) {
+      sendError(res, "User not found", 404);
+      return;
+    }
+
+    const user = users[0];
+
+    sendSuccess(
+      res,
+      {
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+        avatarUrl: user.profile_photo_url || user.avatar_url,
+        currentJobTitle: user.current_job_title,
+        isEmailVerified: Boolean(user.is_email_verified),
+        isActive: Boolean(user.is_active),
+      },
+      "Token is valid"
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getMe(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.user) {
+      sendError(res, "User not authenticated", 401);
+      return;
+    }
+
     const pool = (await import("../database/db")).default;
 
     const [users] = await pool.query<any[]>(
@@ -138,7 +226,7 @@ export async function getMe(
        FROM users u
        LEFT JOIN profiles p ON p.user_id = u.id
        WHERE u.id = ?`,
-      [req.user!.userId]
+      [req.user.userId]
     );
 
     if (users.length === 0) {

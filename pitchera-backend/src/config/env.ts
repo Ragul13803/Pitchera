@@ -34,6 +34,8 @@ export const env = {
     clientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
     redirectUri: requireEnv("GOOGLE_REDIRECT_URI"),
     gmailRedirectUri: requireEnv("GOOGLE_GMAIL_REDIRECT_URI"),
+    webClientId: process.env.GOOGLE_WEB_CLIENT_ID || "", // Same as clientId usually
+
   },
 
   encryptionKey: requireEnv("ENCRYPTION_KEY"),

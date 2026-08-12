@@ -2,12 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken, JwtPayload } from "../utils/jwt";
 import { sendError } from "../utils/response";
 
-export interface AuthRequest extends Request {
-  user?: JwtPayload;
-}
-
+// Remove AuthRequest interface - use Express.Request directly
 export function authenticate(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void {
@@ -22,7 +19,7 @@ export function authenticate(
 
   try {
     const payload = verifyAccessToken(token);
-    req.user = payload;
+    req.user = payload; // Now TypeScript knows about this property
     next();
   } catch {
     sendError(res, "Invalid or expired token", 401);

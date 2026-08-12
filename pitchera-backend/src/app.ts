@@ -24,7 +24,7 @@ app.use(helmet({
 // CORS
 const allowedOrigins = env.isProduction
   ? [env.frontendUrl]
-  : [env.frontendUrl, "http://localhost:8081", "http://localhost:19006"];
+  : [env.frontendUrl, "http://localhost:8082", "http://localhost:19006"];
 
 app.use(
   cors({

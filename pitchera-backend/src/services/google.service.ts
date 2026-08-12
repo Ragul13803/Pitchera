@@ -1,6 +1,8 @@
 import { google } from "googleapis";
+import { OAuth2Client } from "google-auth-library";
 import { env } from "../config/env";
 
+// Existing OAuth client for web flow
 export function getOAuthClient() {
   return new google.auth.OAuth2(
     env.google.clientId,
@@ -40,6 +42,7 @@ export function getGmailAuthUrl(userId: number): string {
   });
 }
 
+// Existing web flow
 export async function getGoogleUserInfo(code: string): Promise<{
   googleId: string;
   email: string;
@@ -67,6 +70,56 @@ export async function getGoogleUserInfo(code: string): Promise<{
   };
 }
 
+// ===== NEW: Mobile Google Authentication =====
+
+// Create OAuth2Client for mobile ID token verification
+const mobileAuthClient = new OAuth2Client({
+  clientId: env.google.webClientId,
+});
+
+/**
+ * Verify Google ID token from mobile app
+ */
+export async function verifyGoogleIdToken(idToken: string): Promise<{
+  googleId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string;
+  emailVerified: boolean;
+}> {
+  try {
+    // Verify the ID token
+    const ticket = await mobileAuthClient.verifyIdToken({
+      idToken,
+      audience: [
+        env.google.clientId,
+        // env.google.iosClientId,
+        // env.google.androidClientId,
+      ].filter(Boolean), // Filter out empty strings
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.sub || !payload.email) {
+      throw new Error("Invalid token payload");
+    }
+
+    return {
+      googleId: payload.sub,
+      email: payload.email,
+      firstName: payload.given_name || "",
+      lastName: payload.family_name || "",
+      avatarUrl: payload.picture,
+      emailVerified: payload.email_verified || false,
+    };
+  } catch (error: any) {
+    console.error("Google ID token verification error:", error);
+    throw new Error(`Invalid Google ID token: ${error.message}`);
+  }
+}
+
+// Existing Gmail exchange code function
 export async function exchangeGmailCode(code: string): Promise<{
   accessToken: string;
   refreshToken: string;
@@ -95,9 +148,7 @@ export async function exchangeGmailCode(code: string): Promise<{
   return {
     accessToken: tokens.access_token!,
     refreshToken: tokens.refresh_token,
-    tokenExpiry: tokens.expiry_date
-      ? new Date(tokens.expiry_date)
-      : null,
+    tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
     gmailAddress: data.email,
   };
 }

@@ -19,6 +19,7 @@ interface User extends RowDataPacket {
   google_id: string | null;
   avatar_url: string | null;
   is_active: number;
+  is_email_verified: number;
 }
 
 export async function registerUser(
@@ -46,16 +47,10 @@ export async function registerUser(
   const userId = result.insertId;
 
   // Create empty profile
-  await pool.query(
-    "INSERT INTO profiles (user_id) VALUES (?)",
-    [userId]
-  );
+  await pool.query("INSERT INTO profiles (user_id) VALUES (?)", [userId]);
 
   // Create empty social links
-  await pool.query(
-    "INSERT INTO social_links (user_id) VALUES (?)",
-    [userId]
-  );
+  await pool.query("INSERT INTO social_links (user_id) VALUES (?)", [userId]);
 
   // Create default email template
   await createDefaultTemplate(userId);
@@ -69,6 +64,7 @@ export async function registerUser(
       firstName,
       lastName,
       email: email.toLowerCase(),
+      isEmailVerified: false,
     },
   };
 }
@@ -109,6 +105,7 @@ export async function loginUser(
       lastName: user.last_name,
       email: user.email,
       avatarUrl: user.avatar_url,
+      isEmailVerified: Boolean(user.is_email_verified),
     },
   };
 }
@@ -135,19 +132,48 @@ export async function findOrCreateGoogleUser(googleProfile: {
     // Update google_id if not set (existing email account)
     if (!user.google_id) {
       await pool.query(
-        "UPDATE users SET google_id = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?",
+        `UPDATE users 
+         SET google_id = ?, 
+             avatar_url = COALESCE(avatar_url, ?),
+             is_email_verified = 1
+         WHERE id = ?`,
         [googleProfile.googleId, googleProfile.avatarUrl, userId]
+      );
+    } else {
+      // Update avatar if new one provided
+      await pool.query(
+        `UPDATE users 
+         SET avatar_url = COALESCE(?, avatar_url),
+             first_name = ?,
+             last_name = ?
+         WHERE id = ?`,
+        [
+          googleProfile.avatarUrl,
+          googleProfile.firstName,
+          googleProfile.lastName,
+          userId,
+        ]
       );
     }
 
+    // Fetch updated user
+    const [updated] = await pool.query<User[]>(
+      "SELECT * FROM users WHERE id = ?",
+      [userId]
+    );
+
+    const updatedUser = updated[0];
+
     userData = {
-      id: user.id,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      email: user.email,
-      avatarUrl: user.avatar_url || googleProfile.avatarUrl,
+      id: updatedUser.id,
+      firstName: updatedUser.first_name,
+      lastName: updatedUser.last_name,
+      email: updatedUser.email,
+      avatarUrl: updatedUser.avatar_url,
+      isEmailVerified: Boolean(updatedUser.is_email_verified),
     };
   } else {
+    // Create new user
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO users (first_name, last_name, email, google_id, avatar_url, is_email_verified)
        VALUES (?, ?, ?, ?, ?, 1)`,
@@ -173,6 +199,7 @@ export async function findOrCreateGoogleUser(googleProfile: {
       lastName: googleProfile.lastName,
       email: googleProfile.email.toLowerCase(),
       avatarUrl: googleProfile.avatarUrl,
+      isEmailVerified: true,
     };
   }
 
