@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,72 +15,19 @@ import {
 
 import { Colors } from "@/constants/theme";
 import { Input } from "@/components/ui/Input";
-import { useGoogleAuth } from "@/hooks/useGoogleAuth";
-import { ApiError } from "@/services/api";
 import { authService } from "@/services/auth.service";
+import { ApiError } from "@/services/api";
+import GoogleLoginButton from "@/components/GoogleLoginButton";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Login() {
+  const { login } = useAuth(); // ✅ Get login from context
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Google Auth
-  const { request, response, promptAsync } = useGoogleAuth();
-
-  // Handle Google OAuth response
-  useEffect(() => {
-    handleGoogleResponse();
-  }, [response]);
-
-  const handleGoogleResponse = async () => {
-    if (response?.type === "success") {
-      setLoading(true);
-      try {
-        const { id_token } = response.params;
-
-        if (!id_token) {
-          Alert.alert("Error", "No ID token received from Google");
-          return;
-        }
-
-        // Authenticate with backend
-        const result = await authService.googleMobileAuth({
-          idToken: id_token,
-        });
-
-        console.log("Google auth successful:", result.user.email);
-        
-        // Navigate to dashboard
-        router.replace("/(app)/dashboard");
-      } catch (error: any) {
-        console.error("Google auth error:", error);
-        
-        let errorMessage = "Failed to authenticate with Google";
-        
-        if (error instanceof ApiError) {
-          errorMessage = error.message;
-        } else if (error?.message) {
-          errorMessage = error.message;
-        }
-        
-        Alert.alert("Authentication Failed", errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    } else if (response?.type === "error") {
-      console.error("Google OAuth error:", response.error);
-      Alert.alert(
-        "Error",
-        "Google authentication was cancelled or failed. Please try again."
-      );
-    } else if (response?.type === "cancel") {
-      console.log("Google authentication cancelled by user");
-    }
-  };
-
   const handleLogin = async () => {
-    // Validation
     if (!email.trim()) {
       Alert.alert("Validation Error", "Please enter your email address");
       return;
@@ -92,7 +38,6 @@ export default function Login() {
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert("Validation Error", "Please enter a valid email address");
@@ -101,60 +46,38 @@ export default function Login() {
 
     setLoading(true);
     try {
+      // ✅ Import authService and call it, then use context's login
+      const { authService } = await import('@/services/auth.service');
+      
       const result = await authService.login({
         email: email.toLowerCase().trim(),
         password,
       });
 
-      console.log("Login successful:", result.user.email);
-      
-      // Navigate to dashboard
+      // ✅ Update AuthContext state too
+      await login(result.tokens, result.user);
+
+      console.log("✅ Login successful:", result.user.email);
       router.replace("/(app)/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
-      
+
       let errorMessage = "Login failed. Please check your credentials.";
-      
-      if (error instanceof ApiError) {
-        errorMessage = error.message;
-      } else if (error?.message) {
+      if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert("Login Failed", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      if (!request) {
-        Alert.alert("Error", "Google Sign-In is not ready. Please try again in a moment.");
-        return;
-      }
-
-      await promptAsync();
-    } catch (error) {
-      console.error("Error initiating Google login:", error);
-      Alert.alert("Error", "Failed to start Google authentication");
-    }
-  };
-
-  const handleForgotPassword = () => {
-    router.push("/forgot-password");
-  };
-
-  const handleSignUp = () => {
-    router.push("/sign-up");
-  };
 
   const isFormValid = email.trim() && password;
-  const isGoogleReady = request && !loading;
 
   return (
     <View style={styles.screen}>
-      {/* Background decorations */}
       <View style={styles.backgroundCircleOne} />
       <View style={styles.backgroundCircleTwo} />
 
@@ -173,14 +96,12 @@ export default function Login() {
               <View style={styles.brandIcon}>
                 <Text style={styles.brandIconText}>P</Text>
               </View>
-
               <Text style={styles.logo}>Pitchera</Text>
             </View>
 
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Welcome back</Text>
-
               <Text style={styles.subtitle}>
                 Sign in to continue to your account
               </Text>
@@ -228,10 +149,9 @@ export default function Login() {
                 }
               />
 
-              {/* Forgot Password */}
               <Pressable
                 style={styles.forgotButton}
-                onPress={handleForgotPassword}
+                onPress={() => router.push("/forgot-password")}
                 hitSlop={8}
                 disabled={loading}
               >
@@ -242,7 +162,6 @@ export default function Login() {
                 </Text>
               </Pressable>
 
-              {/* Login Button */}
               <Pressable
                 style={({ pressed }) => [
                   styles.loginButton,
@@ -252,7 +171,7 @@ export default function Login() {
                 onPress={handleLogin}
                 disabled={!isFormValid || loading}
               >
-                {loading && !response ? (
+                {loading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
@@ -266,44 +185,26 @@ export default function Login() {
             {/* Divider */}
             <View style={styles.dividerContainer}>
               <View style={styles.divider} />
-
               <View style={styles.orContainer}>
                 <Text style={styles.orText}>OR</Text>
               </View>
-
               <View style={styles.divider} />
             </View>
 
             {/* Google Login */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.googleButton,
-                pressed && isGoogleReady && styles.buttonPressed,
-                !isGoogleReady && styles.buttonDisabled,
-              ]}
-              onPress={handleGoogleLogin}
-              disabled={!isGoogleReady}
-            >
-              {loading && response ? (
-                <ActivityIndicator size="small" color={Colors.primary} />
-              ) : (
-                <>
-                  <Image
-                    source={require("@/assets/images/google.png")}
-                    style={styles.googleLogo}
-                    resizeMode="contain"
-                  />
-
-                  <Text style={styles.googleText}>Continue with Google</Text>
-                </>
-              )}
-            </Pressable>
+            <GoogleLoginButton
+              onLoading={setLoading}
+              disabled={loading}
+            />
 
             {/* Sign Up */}
             <View style={styles.signupContainer}>
               <Text style={styles.signupText}>Don't have an account?</Text>
-
-              <Pressable onPress={handleSignUp} hitSlop={8} disabled={loading}>
+              <Pressable
+                onPress={() => router.push("/sign-up")}
+                hitSlop={8}
+                disabled={loading}
+              >
                 <Text
                   style={[styles.signupLink, loading && styles.disabledText]}
                 >
@@ -326,15 +227,8 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-
-  screen: {
-    flex: 1,
-    backgroundColor: "#F6F8FC",
-  },
-
+  flex: { flex: 1 },
+  screen: { flex: 1, backgroundColor: "#F6F8FC" },
   scrollContent: {
     flexGrow: 1,
     alignItems: "center",
@@ -342,7 +236,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 40,
   },
-
   backgroundCircleOne: {
     position: "absolute",
     width: 280,
@@ -353,7 +246,6 @@ const styles = StyleSheet.create({
     right: -100,
     opacity: 0.6,
   },
-
   backgroundCircleTwo: {
     position: "absolute",
     width: 220,
@@ -364,7 +256,6 @@ const styles = StyleSheet.create({
     left: -100,
     opacity: 0.7,
   },
-
   card: {
     width: "100%",
     maxWidth: 430,
@@ -375,20 +266,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E8ECF2",
     shadowColor: "#0F172A",
-    shadowOffset: {
-      width: 0,
-      height: 12,
-    },
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.07,
     shadowRadius: 30,
     elevation: 5,
   },
-
-  brandContainer: {
-    alignItems: "center",
-    marginBottom: 28,
-  },
-
+  brandContainer: { alignItems: "center", marginBottom: 28 },
   brandIcon: {
     width: 52,
     height: 52,
@@ -398,33 +281,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 10,
     shadowColor: Colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 4,
   },
-
-  brandIconText: {
-    color: "#FFFFFF",
-    fontSize: 25,
-    fontWeight: "800",
-  },
-
+  brandIconText: { color: "#FFFFFF", fontSize: 25, fontWeight: "800" },
   logo: {
     fontSize: 24,
     fontWeight: "800",
     color: "#111827",
     letterSpacing: -0.5,
   },
-
-  header: {
-    alignItems: "center",
-    marginBottom: 28,
-  },
-
+  header: { alignItems: "center", marginBottom: 28 },
   title: {
     fontSize: 28,
     lineHeight: 34,
@@ -433,7 +302,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.7,
     textAlign: "center",
   },
-
   subtitle: {
     marginTop: 8,
     fontSize: 14,
@@ -442,32 +310,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 300,
   },
-
-  form: {
-    width: "100%",
-  },
-
-  eyeButton: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
+  form: { width: "100%" },
+  eyeButton: { alignItems: "center", justifyContent: "center" },
   forgotButton: {
     alignSelf: "flex-end",
     marginTop: -6,
     marginBottom: 18,
   },
-
-  forgotText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: Colors.primary,
-  },
-
-  disabledText: {
-    opacity: 0.5,
-  },
-
+  forgotText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  disabledText: { opacity: 0.5 },
   loginButton: {
     height: 52,
     borderRadius: 12,
@@ -477,95 +328,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     shadowColor: Colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.22,
     shadowRadius: 12,
     elevation: 3,
   },
-
-  loginButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-
-  buttonPressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.985 }],
-  },
-
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-
+  loginButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  buttonPressed: { opacity: 0.75, transform: [{ scale: 0.985 }] },
+  buttonDisabled: { opacity: 0.5 },
   dividerContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginVertical: 24,
   },
-
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E5E7EB",
-  },
-
-  orContainer: {
-    paddingHorizontal: 14,
-  },
-
+  divider: { flex: 1, height: 1, backgroundColor: "#E5E7EB" },
+  orContainer: { paddingHorizontal: 14 },
   orText: {
     fontSize: 11,
     fontWeight: "700",
     color: "#94A3B8",
     letterSpacing: 0.5,
   },
-
-  googleButton: {
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#D9DEE7",
-    backgroundColor: "#FFFFFF",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 11,
-  },
-
-  googleLogo: {
-    width: 22,
-    height: 22,
-  },
-
-  googleText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-
   signupContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     marginTop: 26,
   },
-
-  signupText: {
-    fontSize: 13,
-    color: "#64748B",
-  },
-
+  signupText: { fontSize: 13, color: "#64748B" },
   signupLink: {
     marginLeft: 5,
     fontSize: 13,
     fontWeight: "700",
     color: Colors.primary,
   },
-
   terms: {
     marginTop: 22,
     fontSize: 11,
@@ -574,9 +370,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 8,
   },
-
-  termsLink: {
-    color: "#64748B",
-    fontWeight: "600",
-  },
+  termsLink: { color: "#64748B", fontWeight: "600" },
 });
