@@ -78,7 +78,7 @@ export const authService = {
     data: LoginRequest
   ): Promise<{ tokens: AuthTokens; user: User }> {
     // ✅ Unwrap the response properly
-    const response = await api.post<ApiWrapper<AuthData>>('/auth/login', data);
+    const response = await api.post<ApiWrapper<AuthData>>('/auth/(auth)/login', data);
     
     const authData = response.data;
     const tokens = {
@@ -139,7 +139,7 @@ export const authService = {
   },
 
   async forgotPassword(email: string): Promise<void> {
-    await api.post('/auth/forgot-password', { email });
+    await api.post('/auth/(auth)/forgot-password', { email });
   },
 
   async resetPassword(token: string, password: string): Promise<void> {

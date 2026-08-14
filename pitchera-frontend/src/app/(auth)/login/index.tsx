@@ -151,7 +151,7 @@ export default function Login() {
 
               <Pressable
                 style={styles.forgotButton}
-                onPress={() => router.push("/forgot-password")}
+                onPress={() => router.push("/(auth)/forgot-password")}
                 hitSlop={8}
                 disabled={loading}
               >
@@ -201,7 +201,7 @@ export default function Login() {
             <View style={styles.signupContainer}>
               <Text style={styles.signupText}>Don't have an account?</Text>
               <Pressable
-                onPress={() => router.push("/sign-up")}
+                onPress={() => router.push("/(auth)/sign-up")}
                 hitSlop={8}
                 disabled={loading}
               >
@@ -233,8 +233,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingHorizontal: 8,
+    paddingVertical: 18,
   },
   backgroundCircleOne: {
     position: "absolute",
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     shadowRadius: 30,
     elevation: 5,
   },
-  brandContainer: { alignItems: "center", marginBottom: 28 },
+  brandContainer: { alignItems: "center", marginBottom: 20 },
   brandIcon: {
     width: 52,
     height: 52,
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   },
   brandIconText: { color: "#FFFFFF", fontSize: 25, fontWeight: "800" },
   logo: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "800",
     color: "#111827",
     letterSpacing: -0.5,

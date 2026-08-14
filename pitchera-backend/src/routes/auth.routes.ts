@@ -6,7 +6,7 @@ const router = Router();
 
 // Standard auth
 router.post("/register", authController.register);
-router.post("/login", authController.login);
+router.post("/(auth)/login", authController.login);
 router.post("/refresh", authController.refreshToken);
 router.post("/logout", authController.logout);
 

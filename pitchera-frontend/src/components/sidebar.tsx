@@ -74,7 +74,7 @@ export function Sidebar() {
 
         {/* Logout */}
         <Pressable
-          onPress={() => router.replace("/login" as any)}
+          onPress={() => router.replace("/(auth)/login" as any)}
           style={styles.logoutButton}
         >
           <Ionicons
