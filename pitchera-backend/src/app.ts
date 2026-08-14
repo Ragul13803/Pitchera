@@ -16,39 +16,106 @@ import emailRoutes from "./routes/email.routes";
 
 const app = express();
 
-// Security
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-}));
+/**
+ * =========================================================
+ * SECURITY
+ * =========================================================
+ */
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: "cross-origin",
+    },
+  })
+);
 
-// CORS
-const allowedOrigins = env.isProduction
-  ? [env.frontendUrl]
-  : [env.frontendUrl, "http://localhost:8082", "http://localhost:19006"];
+/**
+ * =========================================================
+ * CORS
+ * =========================================================
+ *
+ * Local development:
+ *   http://localhost:8082
+ *   http://localhost:8081
+ *   http://localhost:3000
+ *   http://localhost:19006
+ *
+ * Production:
+ *   env.frontendUrl
+ *
+ * env.frontendUrl should be your deployed Netlify URL.
+ */
+const allowedOrigins = [
+  env.frontendUrl,
+
+  // Local development
+  "http://localhost:8082",
+  "http://localhost:8081",
+  "http://localhost:3000",
+  "http://localhost:19006",
+].filter(Boolean);
+
+console.log("🌐 Allowed CORS origins:", allowedOrigins);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+      // React Native / native requests may not send Origin
+      if (!origin) {
+        return callback(null, true);
       }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log("❌ CORS blocked origin:", origin);
+
+      return callback(
+        new Error(`CORS blocked: ${origin}`)
+      );
     },
+
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
   })
 );
 
-// Compression
+/**
+ * =========================================================
+ * COMPRESSION
+ * =========================================================
+ */
 app.use(compression());
 
-// Rate limiting
+/**
+ * =========================================================
+ * RATE LIMITING
+ * =========================================================
+ */
+
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 200,
-  message: { success: false, message: "Too many requests, please try again later" },
+
+  message: {
+    success: false,
+    message: "Too many requests, please try again later",
+  },
+
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -56,44 +123,106 @@ const globalLimiter = rateLimit({
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: { success: false, message: "Too many auth attempts, please try again later" },
+
+  message: {
+    success: false,
+    message: "Too many auth attempts, please try again later",
+  },
+
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 app.use(globalLimiter);
 
-// Body parsing
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+/**
+ * =========================================================
+ * BODY PARSING
+ * =========================================================
+ */
+app.use(
+  express.json({
+    limit: "10mb",
+  })
+);
 
-// Static files (uploads)
-app.use("/uploads", express.static(path.join(process.cwd(), env.uploadDir)));
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "10mb",
+  })
+);
 
-// Routes
-app.get("/", (req, res) => {
+/**
+ * =========================================================
+ * STATIC UPLOADS
+ * =========================================================
+ */
+app.use(
+  "/uploads",
+  express.static(
+    path.join(
+      process.cwd(),
+      env.uploadDir
+    )
+  )
+);
+
+/**
+ * =========================================================
+ * BASIC ROUTES
+ * =========================================================
+ */
+
+app.get("/", (_req, res) => {
   res.json({
+    success: true,
     message: "Pitchera Working Fine!!",
   });
 });
 
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
   res.json({
+    success: true,
     message: "Pitchera Service is Running!!",
-    status: "OK", 
-    timestamp: new Date().toISOString()
+    status: "OK",
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Routes
-app.use("/api/auth", authLimiter, authRoutes);
-app.use("/api/profile", profileRoutes);
-app.use("/api/gmail", gmailRoutes);
-app.use("/api/jobs", jobsRoutes);
-app.use("/api/emails", emailRoutes);
+/**
+ * =========================================================
+ * API ROUTES
+ * =========================================================
+ */
 
-// 404 handler
+// Authentication
+app.use("/api/auth", authLimiter, authRoutes);
+
+// Profile
+app.use( "/api/profile", profileRoutes );
+
+// Gmail
+app.use( "/api/gmail", gmailRoutes );
+
+// Jobs
+app.use( "/api/jobs", jobsRoutes );
+
+// Email
+app.use( "/api/emails", emailRoutes );
+
+/**
+ * =========================================================
+ * 404 HANDLER
+ * =========================================================
+ */
 app.use(notFoundHandler);
 
-// Error handler
+/**
+ * =========================================================
+ * GLOBAL ERROR HANDLER
+ * =========================================================
+ */
 app.use(errorHandler);
 
 export default app;
