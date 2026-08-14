@@ -47,6 +47,7 @@ app.use(
  */
 const allowedOrigins = [
   env.frontendUrl,
+  "https://pitchera.netlify.app/login",
 
   // Local development
   "http://localhost:8082",
