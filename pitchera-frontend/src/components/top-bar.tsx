@@ -13,7 +13,7 @@ function getTitle(pathname: string) {
   }
 
   if (pathname.startsWith('/applied-jobs')) {
-    return 'Applied Jobs';
+    return 'Applied Jobs List';
   }
 
   if (pathname.startsWith('/profile')) {

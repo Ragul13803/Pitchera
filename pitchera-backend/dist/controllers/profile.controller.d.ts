@@ -1,0 +1,22 @@
+import { Response, NextFunction } from "express";
+import { AuthRequest } from "../middleware/auth.middleware";
+export declare function getProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function getProfileCompletion(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function updateBasicInfo(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function updateProfessionalInfo(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function updateSocialLinks(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function updateSkills(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function upsertEducation(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function deleteEducation(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function upsertExperience(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function deleteExperience(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function upsertProject(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function deleteProject(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function upsertCertification(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function deleteCertification(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function uploadResume(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function parseResume(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function deleteResume(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function setPrimaryResume(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+export declare function uploadProfilePhoto(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
+//# sourceMappingURL=profile.controller.d.ts.map

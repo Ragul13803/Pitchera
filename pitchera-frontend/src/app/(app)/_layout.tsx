@@ -1,10 +1,34 @@
-import { Platform } from 'react-native';
-import { Slot, Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { AppShell } from '@/components/appshell';
+import { Platform, ActivityIndicator, View } from "react-native";
+import { Redirect, Slot, Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { AppShell } from "@/components/appshell";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AppLayout() {
-  if (Platform.OS === 'web') {
+  const { isLoading, isAuthenticated } = useAuth();
+
+  // Wait until localStorage / SecureStore has been checked
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  // No access token OR no user → login
+  if (!isAuthenticated) {
+    return <Redirect href="/login" />;
+  }
+
+  // Authenticated → render protected app
+  if (Platform.OS === "web") {
     return (
       <AppShell>
         <Slot />
@@ -17,7 +41,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Home',
+          title: "Home",
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="home-outline"
@@ -31,7 +55,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="applied-jobs"
         options={{
-          title: 'Applied',
+          title: "Applied",
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="briefcase-outline"
@@ -45,7 +69,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: "Profile",
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="person-outline"

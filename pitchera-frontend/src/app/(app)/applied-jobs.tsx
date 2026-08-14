@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function AppliedJobsScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Applied Jobs</Text>
+      <Text style={styles.title}>Applied Jobs List</Text>
     </View>
   );
 }

@@ -1,83 +1,119 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
-import { Colors } from '@/constants/theme';
-import { authService } from '@/services/auth.service';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+} from 'react-native';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
+import { Colors } from '@/constants/theme';
+import api from '@/services/api';
+import { ApiError } from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
+WebBrowser.maybeCompleteAuthSession();
 
 interface GoogleLoginButtonProps {
   onLoading?: (loading: boolean) => void;
   disabled?: boolean;
 }
 
-export default function GoogleLoginButton({ onLoading, disabled }: GoogleLoginButtonProps) {
-  const [loading, setLoading] = React.useState(false);
-  const [googleLoaded, setGoogleLoaded] = React.useState(false);
+interface ApiWrapper<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
 
-  React.useEffect(() => {
-    loadGoogleScript();
-  }, []);
+interface AuthData {
+  accessToken: string;
+  refreshToken?: string;
+  user: any;
+}
 
-  const loadGoogleScript = () => {
-    // Check if already loaded
-    if (window.google?.accounts) {
-      setGoogleLoaded(true);
+export default function GoogleLoginButton({
+  onLoading,
+  disabled,
+}: GoogleLoginButtonProps) {
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth(); // ✅ Get login function from context
+
+  const redirectUri = makeRedirectUri({
+    scheme: 'pitcherafrontend',
+    path: '/',
+  });
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+    redirectUri,
+  });
+
+  useEffect(() => {
+    if (!response) return;
+
+    if (response.type === 'success') {
+      handleSuccess(response.params.id_token);
+    } else if (response.type === 'error') {
+      console.error('❌ Google OAuth error:', response.error);
+      Alert.alert('Authentication Error', 'Google sign-in failed. Please try again.');
+    } else if (response.type === 'cancel') {
+      console.log('ℹ️ Google sign-in cancelled by user');
+    }
+  }, [response]);
+
+  const handleSuccess = async (idToken: string | undefined) => {
+    if (!idToken) {
+      Alert.alert('Error', 'No ID token received from Google');
       return;
     }
 
-    // Load Google Identity Services script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      setGoogleLoaded(true);
-      initializeGoogle();
-    };
-    document.body.appendChild(script);
-  };
-
-  const initializeGoogle = () => {
-    if (!window.google?.accounts) return;
-
-    window.google.accounts.id.initialize({
-      client_id: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-      callback: handleCredentialResponse,
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    });
-  };
-
-  const handleCredentialResponse = async (response: any) => {
     setLoading(true);
     onLoading?.(true);
 
     try {
-      const { credential } = response;
+      console.log('🔵 Sending ID token to backend...');
 
-      if (!credential) {
-        Alert.alert('Error', 'No credential received from Google');
-        return;
+      // ✅ Call API directly and properly unwrap response
+      const response = await api.post<ApiWrapper<AuthData>>(
+        '/auth/google/mobile',
+        { idToken }
+      );
+
+      console.log('📦 Backend response:', response);
+
+      const authData = response.data;
+
+      if (!authData?.accessToken || !authData?.user) {
+        throw new Error('Invalid response from server');
       }
 
-      // Authenticate with backend
-      const result = await authService.googleMobileAuth({
-        idToken: credential,
-      });
+      // ✅ Use AuthContext's login method - this updates BOTH storage AND React state
+      await login(
+        {
+          accessToken: authData.accessToken,
+          refreshToken: authData.refreshToken,
+        },
+        authData.user
+      );
 
-      console.log('Google auth successful:', result.user.email);
+      console.log('✅ Google auth successful:', authData.user.email);
       
       // Navigate to dashboard
       router.replace('/(app)/dashboard');
     } catch (error: any) {
-      console.error('Google auth error:', error);
-      
-      const errorMessage = error?.message || 'Failed to authenticate with Google';
+      console.error('Google auth backend error:', error);
+
+      let errorMessage = 'Failed to authenticate with Google';
+      if (error instanceof ApiError) {
+        errorMessage = error.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
       Alert.alert('Authentication Failed', errorMessage);
     } finally {
       setLoading(false);
@@ -85,29 +121,32 @@ export default function GoogleLoginButton({ onLoading, disabled }: GoogleLoginBu
     }
   };
 
-  const handleGoogleLogin = () => {
-    if (!googleLoaded || !window.google?.accounts) {
-      Alert.alert('Error', 'Google Sign-In is not ready yet');
+  const handlePress = async () => {
+    if (!request) {
+      Alert.alert('Not Ready', 'Google Sign-In is not ready yet. Please wait.');
       return;
     }
 
     try {
-      window.google.accounts.id.prompt();
+      console.log('🚀 Starting Google auth...');
+      await promptAsync();
     } catch (error) {
-      console.error('Error showing Google prompt:', error);
-      Alert.alert('Error', 'Failed to open Google Sign-In');
+      console.error('Error starting Google auth:', error);
+      Alert.alert('Error', 'Failed to start Google Sign-In');
     }
   };
+
+  const isDisabled = loading || disabled || !request;
 
   return (
     <Pressable
       style={({ pressed }) => [
         styles.googleButton,
-        pressed && !loading && !disabled && styles.buttonPressed,
-        (loading || disabled || !googleLoaded) && styles.buttonDisabled,
+        pressed && !isDisabled && styles.buttonPressed,
+        isDisabled && styles.buttonDisabled,
       ]}
-      onPress={handleGoogleLogin}
-      disabled={loading || disabled || !googleLoaded}
+      onPress={handlePress}
+      disabled={isDisabled}
     >
       {loading ? (
         <ActivityIndicator size="small" color={Colors.primary} />
@@ -137,23 +176,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 11,
   },
-
   googleLogo: {
     width: 22,
     height: 22,
   },
-
   googleText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#1F2937',
   },
-
   buttonPressed: {
     opacity: 0.75,
     transform: [{ scale: 0.985 }],
   },
-
   buttonDisabled: {
     opacity: 0.5,
   },

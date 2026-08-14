@@ -106,7 +106,7 @@ export async function googleCallback(
     const { code, error } = req.query;
 
     if (error || !code) {
-      res.redirect(`${env.frontendUrl}/login?error=google_auth_failed`);
+      res.redirect(`${env.frontendUrl}/(auth)/login?error=google_auth_failed`);
       return;
     }
 
