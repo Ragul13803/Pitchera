@@ -1,11 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, usePathname } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
+  Image as RNImage,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Avatar } from './ui/Avatar';
+
+type User = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl?: string;
+  isEmailVerified: boolean;
+};
 
 function getTitle(pathname: string) {
   if (pathname === '/') {
@@ -26,13 +39,45 @@ function getTitle(pathname: string) {
 export function TopBar() {
   const pathname = usePathname();
 
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem('pitchera_user');
+
+        if (!storedUser) {
+          return;
+        }
+
+        const parsedUser: User = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Failed to load pitchera_user:', error);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  const fullName = user
+    ? `${user.firstName} ${user.lastName}`
+    : 'User';
+
+  const initials = user
+    ? `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase()
+    : 'U';
+
   return (
     <View style={styles.container}>
+      {/* Page Title */}
       <Text style={styles.title}>
         {getTitle(pathname)}
       </Text>
 
+      {/* Right Actions */}
       <View style={styles.actions}>
+        {/* Notifications */}
         <Pressable style={styles.iconButton}>
           <Ionicons
             name="notifications-outline"
@@ -41,23 +86,40 @@ export function TopBar() {
           />
         </Pressable>
 
+        {/* Profile */}
         <Pressable
           style={styles.profile}
           onPress={() => router.push('/profile')}
         >
+          {/* Avatar */}
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              JD
-            </Text>
+            {!user?.avatarUrl ? (
+              // <RNImage
+              //   source={{ uri: user.avatarUrl }}
+              //   style={styles.avatarImage}
+              // />
+              <Avatar uri={user?.avatarUrl} />
+            ) : (
+              <Text style={styles.avatarText}>
+                {initials}
+              </Text>
+            )}
           </View>
 
+          {/* User Information */}
           <View>
-            <Text style={styles.name}>
-              John Doe
+            <Text
+              style={styles.name}
+              numberOfLines={1}
+            >
+              {fullName}
             </Text>
 
-            <Text style={styles.role}>
-              Developer
+            <Text
+              style={styles.role}
+              numberOfLines={1}
+            >
+              {user?.email ?? ''}
             </Text>
           </View>
         </Pressable>
@@ -86,7 +148,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
 
-    // Makes the background/border respect the rounded corners
     overflow: 'hidden',
   },
 
@@ -124,12 +185,20 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
 
-    borderRadius: 19,
+    borderRadius: 20,
+    borderColor: '#d1d1d1',
 
     backgroundColor: '#DBEAFE',
 
     alignItems: 'center',
     justifyContent: 'center',
+
+    overflow: 'hidden',
+  },
+
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
 
   avatarText: {
@@ -139,13 +208,18 @@ const styles = StyleSheet.create({
   },
 
   name: {
+    maxWidth: 140,
+
     fontSize: 13,
     fontWeight: '700',
     color: '#111827',
   },
 
   role: {
+    maxWidth: 160,
+
     marginTop: 2,
+
     fontSize: 11,
     color: '#94A3B8',
   },
