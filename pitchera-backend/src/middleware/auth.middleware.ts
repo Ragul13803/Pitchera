@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken, JwtPayload } from "../utils/jwt";
 import { sendError } from "../utils/response";
 
+export type AuthRequest = Request;
+
+
 // Remove AuthRequest interface - use Express.Request directly
 export function authenticate(
   req: Request,

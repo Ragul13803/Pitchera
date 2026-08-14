@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.ts",
+    "start": "node dist/server.js",
     "start:prod": "node dist/server.js",
     "scheduler": "tsx src/jobs/scheduler.ts"
   },
