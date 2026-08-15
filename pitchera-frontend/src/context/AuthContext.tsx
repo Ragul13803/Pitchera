@@ -5,17 +5,17 @@ import React, {
   useEffect,
   useCallback,
   ReactNode,
-} from 'react';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
-import { User, AuthTokens } from '../types';
+} from "react";
+import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
+import { User, AuthTokens } from "../types";
 
-const TOKEN_KEY = 'pitchera_access_token';
-const REFRESH_TOKEN_KEY = 'pitchera_refresh_token';
-const USER_KEY = 'pitchera_user';
+const TOKEN_KEY = "pitchera_access_token";
+const REFRESH_TOKEN_KEY = "pitchera_refresh_token";
+const USER_KEY = "pitchera_user";
 
 async function secureSet(key: string, value: string): Promise<void> {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     localStorage.setItem(key, value);
   } else {
     await SecureStore.setItemAsync(key, value);
@@ -23,14 +23,15 @@ async function secureSet(key: string, value: string): Promise<void> {
 }
 
 async function secureGet(key: string): Promise<string | null> {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     return localStorage.getItem(key);
   }
+
   return await SecureStore.getItemAsync(key);
 }
 
 async function secureDelete(key: string): Promise<void> {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     localStorage.removeItem(key);
   } else {
     await SecureStore.deleteItemAsync(key);
@@ -55,40 +56,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    restoreSession();
-  }, []);
-
-  const restoreSession = async () => {
+  const restoreSession = useCallback(async () => {
     try {
       const token = await secureGet(TOKEN_KEY);
       const userJson = await secureGet(USER_KEY);
 
+      console.log("AUTH RESTORE");
+      console.log("Platform:", Platform.OS);
+      console.log("Has access token:", !!token);
+      console.log("Has user:", !!userJson);
+
       if (token && userJson) {
+        const parsedUser = JSON.parse(userJson);
+
         setAccessToken(token);
-        setUser(JSON.parse(userJson));
+        setUser(parsedUser);
+
+        console.log("Session restored successfully");
+      } else {
+        setAccessToken(null);
+        setUser(null);
+
+        console.log("No stored session");
       }
     } catch (error) {
-      console.error('Failed to restore session:', error);
+      console.error("Failed to restore session:", error);
+
+      setAccessToken(null);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const login = useCallback(async (tokens: AuthTokens, userData: User) => {
-    await secureSet(TOKEN_KEY, tokens.accessToken);
-    if (tokens.refreshToken) {
-      await secureSet(REFRESH_TOKEN_KEY, tokens.refreshToken);
-    }
-    await secureSet(USER_KEY, JSON.stringify(userData));
-    setAccessToken(tokens.accessToken);
-    setUser(userData);
   }, []);
+
+  useEffect(() => {
+    restoreSession();
+  }, [restoreSession]);
+
+  const login = useCallback(
+    async (tokens: AuthTokens, userData: User) => {
+      await secureSet(TOKEN_KEY, tokens.accessToken);
+
+      if (tokens.refreshToken) {
+        await secureSet(REFRESH_TOKEN_KEY, tokens.refreshToken);
+      }
+
+      await secureSet(USER_KEY, JSON.stringify(userData));
+
+      setAccessToken(tokens.accessToken);
+      setUser(userData);
+    },
+    []
+  );
 
   const logout = useCallback(async () => {
     await secureDelete(TOKEN_KEY);
     await secureDelete(REFRESH_TOKEN_KEY);
     await secureDelete(USER_KEY);
+
     setAccessToken(null);
     setUser(null);
   }, []);
@@ -98,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   }, []);
 
-  const getAccessToken = useCallback(async (): Promise<string | null> => {
+  const getAccessToken = useCallback(async () => {
     return await secureGet(TOKEN_KEY);
   }, []);
 
@@ -122,8 +147,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
+
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
+
   return context;
 }

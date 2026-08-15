@@ -1,4 +1,3 @@
-import ChatBot from "@/components/ChatBot";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { Stack } from "expo-router";
@@ -8,7 +7,6 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthProvider>
         <Stack screenOptions={{ headerShown: false }} />
-        <ChatBot />
       </AuthProvider>
     </ThemeProvider>
   );

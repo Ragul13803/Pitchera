@@ -1,14 +1,14 @@
-import { ReactNode } from 'react';
+import React, { ReactNode } from "react";
 import {
   StyleSheet,
   View,
   useWindowDimensions,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { Sidebar } from './sidebar';
-import { TopBar } from './top-bar';
-import { MobileTabs } from './mobile-tabs';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Chatbot from '@/components/ChatBot'
+import { Sidebar } from "./sidebar";
+import { TopBar } from "./top-bar";
+import { MobileTabs } from "./mobile-tabs";
 
 type AppShellProps = {
   children: ReactNode;
@@ -34,6 +34,9 @@ export function AppShell({ children }: AppShellProps) {
         </View>
 
         {!isDesktop && <MobileTabs />}
+
+        {/* Chatbot - available on desktop + mobile */}
+        <Chatbot />
       </View>
     </SafeAreaView>
   );
@@ -42,12 +45,12 @@ export function AppShell({ children }: AppShellProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
 
   container: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
   },
 
   main: {
@@ -63,13 +66,13 @@ const styles = StyleSheet.create({
     marginRight: 10,
     marginBottom: 10,
 
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
 
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
 
     borderRadius: 10,
 
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 });

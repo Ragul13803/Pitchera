@@ -1,6 +1,14 @@
+import { useLogout } from "@/hooks/useLogout";
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import PopupModal from "./PopupModal";
 
 const menuItems = [
   {
@@ -22,73 +30,97 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { logout } = useLogout();
+
+  const [showLogout, setShowLogout] = useState(false);
+
+  const handleLogout = async () => {
+    setShowLogout(false);
+    await logout();
+  };
 
   return (
-    <View style={styles.sidebar}>
-      {/* Top Section */}
-      <View style={styles.topSection}>
-        {/* Logo */}
-        <Text style={styles.logo}>Pitchera</Text>
+    <>
+      {/* Sidebar */}
+      <View style={styles.sidebar}>
+        {/* Top Section */}
+        <View style={styles.topSection}>
+          {/* Logo */}
+          <Text style={styles.logo}>Pitchera</Text>
 
-        {/* Menu */}
-        <View style={styles.menu}>
-          {menuItems.map((item) => {
-            const isActive =
-              item.route === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.route);
+          {/* Menu */}
+          <View style={styles.menu}>
+            {menuItems.map((item) => {
+              const isActive = pathname.startsWith(item.route);
 
-            return (
-              <Pressable
-                key={item.route}
-                onPress={() => router.push(item.route as any)}
-                style={[
-                  styles.menuItem,
-                  isActive && styles.menuItemActive,
-                ]}
-              >
-                <Ionicons
-                  name={item.icon}
-                  size={20}
-                  color={isActive ? "#2563EB" : "#64748B"}
-                />
-
-                <Text
+              return (
+                <Pressable
+                  key={item.route}
+                  onPress={() => router.push(item.route as any)}
                   style={[
-                    styles.menuText,
-                    isActive && styles.menuTextActive,
+                    styles.menuItem,
+                    isActive && styles.menuItemActive,
                   ]}
                 >
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Ionicons
+                    name={item.icon}
+                    size={20}
+                    color={
+                      isActive
+                        ? "#2563EB"
+                        : "#64748B"
+                    }
+                  />
+
+                  <Text
+                    style={[
+                      styles.menuText,
+                      isActive && styles.menuTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Bottom Section */}
+        <View style={styles.bottom}>
+          {/* Divider */}
+          <View style={styles.bottomBorder} />
+
+          {/* Logout Button */}
+          <Pressable
+            onPress={() => setShowLogout(true)}
+            style={styles.logoutButton}
+          >
+            <Ionicons
+              name="log-out-outline"
+              size={20}
+              color="#EF4444"
+            />
+
+            <Text style={styles.logoutText}>
+              Logout
+            </Text>
+          </Pressable>
         </View>
       </View>
 
-      {/* Bottom Section */}
-      <View style={styles.bottom}>
-        {/* Top border row */}
-        <View style={styles.bottomBorder} />
-
-        {/* Logout */}
-        <Pressable
-          onPress={() => router.replace("/(auth)/login" as any)}
-          style={styles.logoutButton}
-        >
-          <Ionicons
-            name="log-out-outline"
-            size={20}
-            color="#EF4444"
-          />
-
-          <Text style={styles.logoutText}>
-            Logout
-          </Text>
-        </Pressable>
-      </View>
-    </View>
+      {/* Logout Confirmation Modal */}
+      <PopupModal
+        visible={showLogout}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        cancelText="Cancel"
+        confirmText="Logout"
+        confirmBackgroundColor="#9F2B2B"
+        onClose={() => setShowLogout(false)}
+        onConfirm={handleLogout}
+      />
+    </>
   );
 }
 
@@ -170,6 +202,7 @@ const styles = StyleSheet.create({
 
   bottomBorder: {
     height: 1,
+
     width: "100%",
 
     backgroundColor: "#E5E7EB",
@@ -192,7 +225,9 @@ const styles = StyleSheet.create({
 
   logoutText: {
     fontSize: 14,
+
     fontWeight: "600",
+
     color: "#EF4444",
   },
 });

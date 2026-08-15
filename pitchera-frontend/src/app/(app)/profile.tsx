@@ -1,6 +1,4 @@
-// src/app/(app)/profile.tsx
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,10 +7,13 @@ import {
   ActivityIndicator,
   ScrollView,
   Platform,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext';
+  Pressable,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../../context/ThemeContext";
+import { useLogout } from "@/hooks/useLogout";
+import PopupModal from "@/components/PopupModal";
 
 interface PitcheraUser {
   id: number;
@@ -25,9 +26,11 @@ interface PitcheraUser {
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
+  const { logout } = useLogout();
 
   const [user, setUser] = useState<PitcheraUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showLogout, setShowLogout] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -35,17 +38,22 @@ export default function ProfileScreen() {
 
   const loadUser = async () => {
     try {
-      const storedUser = await AsyncStorage.getItem('pitchera_user');
+      const storedUser = await AsyncStorage.getItem("pitchera_user");
 
       if (storedUser) {
         const parsedUser: PitcheraUser = JSON.parse(storedUser);
         setUser(parsedUser);
       }
     } catch (error) {
-      console.error('Failed to load pitchera_user:', error);
+      console.error("Failed to load pitchera_user:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = async () => {
+    setShowLogout(false);
+    await logout();
   };
 
   if (loading) {
@@ -107,343 +115,376 @@ export default function ProfileScreen() {
   const fullName = `${user.firstName} ${user.lastName}`.trim();
 
   const initials =
-    `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase();
+    `${user.firstName?.charAt(0) ?? ""}${user.lastName?.charAt(0) ?? ""}`.toUpperCase();
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.background,
-        },
-      ]}
-    >
-      {/* Top Bar */}
+    <>
       <View
         style={[
-          styles.header,
+          styles.container,
           {
-            backgroundColor: colors.card,
-            borderBottomColor: colors.border,
+            backgroundColor: colors.background,
           },
         ]}
       >
-        <Text
-          style={[
-            styles.headerTitle,
-            {
-              color: colors.text,
-            },
-          ]}
-        >
-          My Profile
-        </Text>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
-        {/* Profile Avatar */}
-        <View style={styles.avatarSection}>
-          {user.avatarUrl ? (
-            <Image
-              source={{ uri: user.avatarUrl }}
-              style={styles.avatar}
-            />
-          ) : (
-            <View
-              style={[
-                styles.avatarPlaceholder,
-                {
-                  backgroundColor: colors.primary,
-                },
-              ]}
-            >
-              <Text style={styles.initials}>{initials}</Text>
-            </View>
-          )}
-
-          <Text
-            style={[
-              styles.name,
-              {
-                color: colors.text,
-              },
-            ]}
-          >
-            {fullName}
-          </Text>
-
-          <View style={styles.verifiedRow}>
-            <Text
-              style={[
-                styles.email,
-                {
-                  color: colors.textSecondary,
-                },
-              ]}
-            >
-              {user.email}
-            </Text>
-
-            {user.isEmailVerified && (
-              <Ionicons
-                name="checkmark-circle"
-                size={18}
-                color="#10B981"
-              />
-            )}
-          </View>
-        </View>
-
-        {/* User Information */}
+        {/* Top Bar */}
         <View
           style={[
-            styles.card,
+            styles.header,
             {
               backgroundColor: colors.card,
-              borderColor: colors.border,
+              borderBottomColor: colors.border,
             },
           ]}
         >
           <Text
             style={[
-              styles.cardTitle,
+              styles.headerTitle,
               {
                 color: colors.text,
               },
             ]}
           >
-            Account Information
+            My Profile
           </Text>
+        </View>
 
-          {/* First Name */}
-          <View style={styles.infoRow}>
-            <View
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+        >
+          {/* Profile Avatar */}
+          <View style={styles.avatarSection}>
+            {user.avatarUrl ? (
+              <Image
+                source={{ uri: user.avatarUrl }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.avatarPlaceholder,
+                  {
+                    backgroundColor: colors.primary,
+                  },
+                ]}
+              >
+                <Text style={styles.initials}>{initials}</Text>
+              </View>
+            )}
+
+            <Text
               style={[
-                styles.iconBox,
+                styles.name,
                 {
-                  backgroundColor: colors.primary + '15',
+                  color: colors.text,
                 },
               ]}
             >
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={colors.primary}
-              />
-            </View>
+              {fullName}
+            </Text>
 
-            <View style={styles.infoContent}>
+            <View style={styles.verifiedRow}>
               <Text
                 style={[
-                  styles.label,
+                  styles.email,
                   {
                     color: colors.textSecondary,
-                  },
-                ]}
-              >
-                First Name
-              </Text>
-
-              <Text
-                style={[
-                  styles.value,
-                  {
-                    color: colors.text,
-                  },
-                ]}
-              >
-                {user.firstName}
-              </Text>
-            </View>
-          </View>
-
-          {/* Last Name */}
-          <View style={styles.infoRow}>
-            <View
-              style={[
-                styles.iconBox,
-                {
-                  backgroundColor: colors.primary + '15',
-                },
-              ]}
-            >
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={colors.primary}
-              />
-            </View>
-
-            <View style={styles.infoContent}>
-              <Text
-                style={[
-                  styles.label,
-                  {
-                    color: colors.textSecondary,
-                  },
-                ]}
-              >
-                Last Name
-              </Text>
-
-              <Text
-                style={[
-                  styles.value,
-                  {
-                    color: colors.text,
-                  },
-                ]}
-              >
-                {user.lastName}
-              </Text>
-            </View>
-          </View>
-
-          {/* Email */}
-          <View style={styles.infoRow}>
-            <View
-              style={[
-                styles.iconBox,
-                {
-                  backgroundColor: colors.primary + '15',
-                },
-              ]}
-            >
-              <Ionicons
-                name="mail-outline"
-                size={20}
-                color={colors.primary}
-              />
-            </View>
-
-            <View style={styles.infoContent}>
-              <Text
-                style={[
-                  styles.label,
-                  {
-                    color: colors.textSecondary,
-                  },
-                ]}
-              >
-                Email
-              </Text>
-
-              <Text
-                style={[
-                  styles.value,
-                  {
-                    color: colors.text,
                   },
                 ]}
               >
                 {user.email}
               </Text>
+
+              {user.isEmailVerified && (
+                <Ionicons
+                  name="checkmark-circle"
+                  size={18}
+                  color="#10B981"
+                />
+              )}
             </View>
           </View>
 
-          {/* User ID */}
-          <View style={styles.infoRow}>
-            <View
+          {/* User Information */}
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Text
               style={[
-                styles.iconBox,
+                styles.cardTitle,
                 {
-                  backgroundColor: colors.primary + '15',
+                  color: colors.text,
                 },
               ]}
             >
-              <Ionicons
-                name="finger-print-outline"
-                size={20}
-                color={colors.primary}
-              />
+              Account Information
+            </Text>
+
+            {/* First Name */}
+            <View style={styles.infoRow}>
+              <View
+                style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: colors.primary + "15",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+              </View>
+
+              <View style={styles.infoContent}>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: colors.textSecondary,
+                    },
+                  ]}
+                >
+                  First Name
+                </Text>
+
+                <Text
+                  style={[
+                    styles.value,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  {user.firstName}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.infoContent}>
-              <Text
+            {/* Last Name */}
+            <View style={styles.infoRow}>
+              <View
                 style={[
-                  styles.label,
+                  styles.iconBox,
                   {
-                    color: colors.textSecondary,
+                    backgroundColor: colors.primary + "15",
                   },
                 ]}
               >
-                User ID
-              </Text>
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+              </View>
 
-              <Text
+              <View style={styles.infoContent}>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: colors.textSecondary,
+                    },
+                  ]}
+                >
+                  Last Name
+                </Text>
+
+                <Text
+                  style={[
+                    styles.value,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  {user.lastName}
+                </Text>
+              </View>
+            </View>
+
+            {/* Email */}
+            <View style={styles.infoRow}>
+              <View
                 style={[
-                  styles.value,
+                  styles.iconBox,
                   {
-                    color: colors.text,
+                    backgroundColor: colors.primary + "15",
                   },
                 ]}
               >
-                {user.id}
-              </Text>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+              </View>
+
+              <View style={styles.infoContent}>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: colors.textSecondary,
+                    },
+                  ]}
+                >
+                  Email
+                </Text>
+
+                <Text
+                  style={[
+                    styles.value,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  {user.email}
+                </Text>
+              </View>
+            </View>
+
+            {/* User ID */}
+            <View style={styles.infoRow}>
+              <View
+                style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: colors.primary + "15",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="finger-print-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+              </View>
+
+              <View style={styles.infoContent}>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: colors.textSecondary,
+                    },
+                  ]}
+                >
+                  User ID
+                </Text>
+
+                <Text
+                  style={[
+                    styles.value,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  {user.id}
+                </Text>
+              </View>
+            </View>
+
+            {/* Email Verification */}
+            <View style={styles.infoRow}>
+              <View
+                style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: user.isEmailVerified
+                      ? "#10B98115"
+                      : "#F59E0B15",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={
+                    user.isEmailVerified
+                      ? "checkmark-circle-outline"
+                      : "alert-circle-outline"
+                  }
+                  size={20}
+                  color={
+                    user.isEmailVerified
+                      ? "#10B981"
+                      : "#F59E0B"
+                  }
+                />
+              </View>
+
+              <View style={styles.infoContent}>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: colors.textSecondary,
+                    },
+                  ]}
+                >
+                  Email Status
+                </Text>
+
+                <Text
+                  style={[
+                    styles.value,
+                    {
+                      color: user.isEmailVerified
+                        ? "#10B981"
+                        : "#F59E0B",
+                    },
+                  ]}
+                >
+                  {user.isEmailVerified
+                    ? "Verified"
+                    : "Not Verified"}
+                </Text>
+              </View>
             </View>
           </View>
 
-          {/* Email Verification */}
-          <View style={styles.infoRow}>
-            <View
-              style={[
-                styles.iconBox,
-                {
-                  backgroundColor: user.isEmailVerified
-                    ? '#10B98115'
-                    : '#F59E0B15',
-                },
-              ]}
-            >
-              <Ionicons
-                name={
-                  user.isEmailVerified
-                    ? 'checkmark-circle-outline'
-                    : 'alert-circle-outline'
-                }
-                size={20}
-                color={
-                  user.isEmailVerified
-                    ? '#10B981'
-                    : '#F59E0B'
-                }
-              />
-            </View>
+          {/* Logout Button */}
+          <Pressable
+            onPress={() => setShowLogout(true)}
+            style={({ pressed }) => [
+              styles.logoutButton,
+              pressed && styles.logoutButtonPressed,
+            ]}
+          >
+            <Ionicons
+              name="log-out-outline"
+              size={20}
+              color="#EF4444"
+            />
 
-            <View style={styles.infoContent}>
-              <Text
-                style={[
-                  styles.label,
-                  {
-                    color: colors.textSecondary,
-                  },
-                ]}
-              >
-                Email Status
-              </Text>
+            <Text style={styles.logoutText}>
+              Logout
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </View>
 
-              <Text
-                style={[
-                  styles.value,
-                  {
-                    color: user.isEmailVerified
-                      ? '#10B981'
-                      : '#F59E0B',
-                  },
-                ]}
-              >
-                {user.isEmailVerified
-                  ? 'Verified'
-                  : 'Not Verified'}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </View>
+      {/* Logout Confirmation */}
+      <PopupModal
+        visible={showLogout}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        cancelText="Cancel"
+        confirmText="Logout"
+        confirmBackgroundColor="#9F2B2B"
+        onClose={() => setShowLogout(false)}
+        onConfirm={handleLogout}
+      />
+    </>
   );
 }
 
@@ -453,27 +494,29 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 56 : 16,
+    paddingTop: Platform.OS === "ios" ? 56 : 16,
     paddingBottom: 14,
     borderBottomWidth: 1,
   },
 
   headerTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
   content: {
     padding: 16,
-    paddingBottom: 40,
+
+    // Extra space for mobile bottom navigation
+    paddingBottom: 80,
   },
 
   avatarSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 28,
   },
 
@@ -487,25 +530,25 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: 55,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   initials: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 34,
-    fontWeight: '800',
+    fontWeight: "800",
   },
 
   name: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: "800",
     marginTop: 16,
   },
 
   verifiedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginTop: 7,
   },
@@ -522,24 +565,24 @@ const styles = StyleSheet.create({
 
   cardTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 8,
   },
 
   infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
 
   iconBox: {
     width: 42,
     height: 42,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
 
@@ -554,12 +597,43 @@ const styles = StyleSheet.create({
 
   value: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
+  },
+
+  /* ---------------- LOGOUT ---------------- */
+
+  logoutButton: {
+    marginTop: 24,
+
+    height: 48,
+
+    borderRadius: 12,
+
+    borderWidth: 1,
+    borderColor: "#FECACA",
+
+    backgroundColor: "#FEF2F2",
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    gap: 8,
+  },
+
+  logoutButtonPressed: {
+    opacity: 0.7,
+  },
+
+  logoutText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#EF4444",
   },
 
   noUserText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     marginTop: 15,
   },
 

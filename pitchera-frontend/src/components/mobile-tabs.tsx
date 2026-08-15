@@ -11,7 +11,7 @@ const items = [
   {
     label: 'Dashboard',
     icon: 'grid-outline' as const,
-    route: '/',
+    route: '/dashboard',
   },
   {
     label: 'Applied',

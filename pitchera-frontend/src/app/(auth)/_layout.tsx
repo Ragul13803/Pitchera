@@ -1,11 +1,14 @@
-import { Redirect } from "expo-router";
 import {
   ActivityIndicator,
   View,
 } from "react-native";
+import {
+  Redirect,
+  Slot,
+} from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 
-export default function Index() {
+export default function AuthLayout() {
   const {
     isLoading,
     isAuthenticated,
@@ -25,11 +28,13 @@ export default function Index() {
     );
   }
 
+  // Token + user already exist
+  // Don't show login/signup/forgot password
   if (isAuthenticated) {
     return (
       <Redirect href="/(app)/dashboard" />
     );
   }
 
-  return <Redirect href="/login" />;
+  return <Slot />;
 }
