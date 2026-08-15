@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   inlineMessage: {
-    fontSize: 13,
+    fontSize: 18,
     color: Colors.textSecondary,
   },
 });

@@ -15,6 +15,7 @@ import { Colors } from '@/constants/theme';
 import api from '@/services/api';
 import { ApiError } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import { Loading } from './ui/Loading';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -149,8 +150,8 @@ export default function GoogleLoginButton({
       disabled={isDisabled}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={Colors.primary} />
-      ) : (
+        <Loading message="Loading..." />
+       ) : (
         <>
           <Image
             source={require('@/assets/images/google.png')}

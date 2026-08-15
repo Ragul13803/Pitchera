@@ -17,7 +17,7 @@ type User = {
   firstName: string;
   lastName: string;
   email: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   isEmailVerified: boolean;
 };
 
@@ -58,9 +58,16 @@ export function TopBar() {
         }
 
         const parsedUser: User = JSON.parse(storedUser);
+
+        console.log('TopBar user:', parsedUser);
+        console.log('TopBar avatarUrl:', parsedUser.avatarUrl);
+
         setUser(parsedUser);
       } catch (error) {
-        console.error('Failed to load pitchera_user:', error);
+        console.error(
+          'Failed to load pitchera_user:',
+          error
+        );
       }
     };
 
@@ -68,12 +75,8 @@ export function TopBar() {
   }, []);
 
   const fullName = user
-    ? `${user.firstName} ${user.lastName}`
+    ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
     : 'User';
-
-  const initials = user
-    ? `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase()
-    : 'U';
 
   return (
     <View
@@ -116,7 +119,7 @@ export function TopBar() {
           />
         </Pressable>
 
-        {/* Profile / Avatar */}
+        {/* Profile */}
         <Pressable
           style={[
             styles.profile,
@@ -124,21 +127,26 @@ export function TopBar() {
           ]}
           onPress={() => router.push('/profile')}
         >
-          {/* Avatar */}
+          {/* Google Profile Image */}
           <View
-            style={[
-              styles.avatar,
-              isMobile && styles.mobileAvatar,
-            ]}
-          >
-            {user?.avatarUrl ? (
-              <Avatar uri={user.avatarUrl} />
-            ) : (
-              <Text style={styles.avatarText}>
-                {initials}
-              </Text>
-            )}
-          </View>
+  style={[
+    styles.avatar,
+    isMobile && styles.mobileAvatar,
+  ]}
+>
+  {user?.avatarUrl ? (
+    <Avatar
+      uri={user.avatarUrl}
+      size={isMobile ? 36 : 38}
+    />
+  ) : (
+    <Ionicons
+      name="person"
+      size={isMobile ? 19 : 21}
+      color="#2563EB"
+    />
+  )}
+</View>
 
           {/* User Information - hidden on mobile */}
           {!isMobile && (
@@ -273,12 +281,6 @@ const styles = StyleSheet.create({
     height: 36,
 
     borderRadius: 18,
-  },
-
-  avatarText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#2563EB',
   },
 
   userInfo: {

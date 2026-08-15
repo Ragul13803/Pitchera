@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { useLogout } from "@/hooks/useLogout";
 import PopupModal from "@/components/PopupModal";
+import { Loading } from "@/components/ui/Loading";
 
 interface PitcheraUser {
   id: number;
@@ -57,18 +58,7 @@ export default function ProfileScreen() {
   };
 
   if (loading) {
-    return (
-      <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: colors.background,
-          },
-        ]}
-      >
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <Loading message="Loading..." />
   }
 
   if (!user) {

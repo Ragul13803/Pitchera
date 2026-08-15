@@ -299,9 +299,8 @@ export default function Login() {
 
               {/* Form */}
 
-              <View style={styles.form}>
+              {/* <View style={styles.form}>
 
-                {/* Email */}
 
                 <Input
                   label="Email address"
@@ -315,7 +314,6 @@ export default function Login() {
                   required
                 />
 
-                {/* Password */}
 
                 <Input
                   label="Password"
@@ -357,8 +355,6 @@ export default function Login() {
                   }
                 />
 
-                {/* Forgot Password */}
-
                 <Pressable
                   style={styles.forgotButton}
                   onPress={() =>
@@ -380,7 +376,6 @@ export default function Login() {
                   </Text>
                 </Pressable>
 
-                {/* Login */}
 
                 <Pressable
                   style={({ pressed }) => [
@@ -428,11 +423,11 @@ export default function Login() {
                     </>
                   )}
                 </Pressable>
-              </View>
+              </View> */}
 
               {/* Divider */}
 
-              <View style={styles.dividerContainer}>
+              {/* <View style={styles.dividerContainer}>
                 <View style={styles.divider} />
 
                 <View style={styles.orContainer}>
@@ -442,7 +437,7 @@ export default function Login() {
                 </View>
 
                 <View style={styles.divider} />
-              </View>
+              </View> */}
 
               {/* Google Login */}
 
@@ -451,9 +446,8 @@ export default function Login() {
                 disabled={loading}
               />
 
-              {/* Sign Up */}
 
-              <View
+              {/* <View
                 style={[
                   styles.signupContainer,
                   {
@@ -489,7 +483,7 @@ export default function Login() {
                     Create account
                   </Text>
                 </Pressable>
-              </View>
+              </View> */}
 
               {/* Terms */}
 

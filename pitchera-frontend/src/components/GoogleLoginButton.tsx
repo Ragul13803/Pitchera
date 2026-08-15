@@ -14,6 +14,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { Colors } from '@/constants/theme';
 import { authService } from '@/services/auth.service';
 import { ApiError } from '@/services/api';
+import { Loading } from './ui/Loading';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -100,7 +101,7 @@ export default function GoogleLoginButton({
       disabled={isDisabled}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={Colors.primary} />
+        <Loading message="Loading..." />
       ) : (
         <>
           <Image
