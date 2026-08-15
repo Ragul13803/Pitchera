@@ -3,11 +3,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import { useState } from "react";
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+
+import PITCHERA_FULL_LOGO from "@/assets/images/pitchera_full_logo.png";
 import PopupModal from "./PopupModal";
 
 const menuItems = [
@@ -41,14 +44,21 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Sidebar */}
       <View style={styles.sidebar}>
         {/* Top Section */}
         <View style={styles.topSection}>
-          {/* Logo */}
-          <Text style={styles.logo}>Pitchera</Text>
+          {/* Brand */}
+          <View style={styles.brand}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={PITCHERA_FULL_LOGO}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
 
-          {/* Menu */}
+          {/* Navigation */}
           <View style={styles.menu}>
             {menuItems.map((item) => {
               const isActive = pathname.startsWith(item.route);
@@ -57,19 +67,16 @@ export function Sidebar() {
                 <Pressable
                   key={item.route}
                   onPress={() => router.push(item.route as any)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.menuItem,
                     isActive && styles.menuItemActive,
+                    pressed && styles.menuItemPressed,
                   ]}
                 >
                   <Ionicons
                     name={item.icon}
                     size={20}
-                    color={
-                      isActive
-                        ? "#2563EB"
-                        : "#64748B"
-                    }
+                    color={isActive ? "#2563EB" : "#64748B"}
                   />
 
                   <Text
@@ -88,13 +95,14 @@ export function Sidebar() {
 
         {/* Bottom Section */}
         <View style={styles.bottom}>
-          {/* Divider */}
           <View style={styles.bottomBorder} />
 
-          {/* Logout Button */}
           <Pressable
             onPress={() => setShowLogout(true)}
-            style={styles.logoutButton}
+            style={({ pressed }) => [
+              styles.logoutButton,
+              pressed && styles.logoutPressed,
+            ]}
           >
             <Ionicons
               name="log-out-outline"
@@ -102,14 +110,12 @@ export function Sidebar() {
               color="#EF4444"
             />
 
-            <Text style={styles.logoutText}>
-              Logout
-            </Text>
+            <Text style={styles.logoutText}>Logout</Text>
           </Pressable>
         </View>
       </View>
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout Confirmation */}
       <PopupModal
         visible={showLogout}
         title="Logout"
@@ -125,53 +131,80 @@ export function Sidebar() {
 }
 
 const styles = StyleSheet.create({
+  /* ================================
+     SIDEBAR
+  ================================= */
+
   sidebar: {
     width: 250,
 
     backgroundColor: "#FFFFFF",
 
-    borderRightWidth: 1,
-    borderRightColor: "#E5E7EB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
 
     paddingHorizontal: 12,
-    paddingVertical: 16,
-
-    justifyContent: "space-between",
+    paddingVertical: 18,
 
     margin: 10,
 
-    borderRadius: 10,
+    borderRadius: 14,
+
+    justifyContent: "space-between",
 
     overflow: "hidden",
   },
-
-  /* ---------------- TOP ---------------- */
 
   topSection: {
     width: "100%",
   },
 
-  logo: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111827",
+  /* ================================
+     BRAND / LOGO
+  ================================= */
 
-    alignSelf: "center",
-
-    marginBottom: 32,
+  brand: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 24,
   },
 
-  menu: {
-    gap: 6,
+  logoContainer: {
+    width: 220,
+    height: 70,
+
+    borderRadius: 8,
+
+    overflow: "hidden",
+
+    backgroundColor: "#F8FAFC",
+
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  logoImage: {
     width: "100%",
+    height: "100%",
+  },
+
+  /* ================================
+     MENU
+  ================================= */
+
+  menu: {
+    width: "100%",
+    gap: 6,
   },
 
   menuItem: {
     minHeight: 48,
 
-    borderRadius: 10,
+    width: "100%",
 
     paddingHorizontal: 12,
+
+    borderRadius: 10,
 
     flexDirection: "row",
     alignItems: "center",
@@ -183,44 +216,62 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
   },
 
+  menuItemPressed: {
+    opacity: 0.7,
+  },
+
   menuText: {
     fontSize: 14,
+
     fontWeight: "500",
+
     color: "#64748B",
   },
 
   menuTextActive: {
     color: "#2563EB",
+
     fontWeight: "700",
   },
 
-  /* ---------------- BOTTOM ---------------- */
+  /* ================================
+     BOTTOM
+  ================================= */
 
   bottom: {
     width: "100%",
   },
 
   bottomBorder: {
-    height: 1,
-
     width: "100%",
+    height: 1,
 
     backgroundColor: "#E5E7EB",
 
     marginBottom: 10,
   },
 
+  /* ================================
+     LOGOUT
+  ================================= */
+
   logoutButton: {
     minHeight: 48,
 
-    borderRadius: 10,
+    width: "100%",
 
     paddingHorizontal: 12,
+
+    borderRadius: 10,
 
     flexDirection: "row",
     alignItems: "center",
 
     gap: 12,
+  },
+
+  logoutPressed: {
+    backgroundColor: "#FEF2F2",
   },
 
   logoutText: {

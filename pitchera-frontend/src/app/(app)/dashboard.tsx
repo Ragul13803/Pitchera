@@ -22,7 +22,7 @@ export default function Dashboard() {
           <Text style={[styles.greeting, { color: colors.textSecondary }]}>
             {greeting()},
           </Text>
-          <Text style={[styles.userName, { color: colors.card }]}>
+          <Text style={[styles.userName, { color: colors.textSecondary }]}>
             {fullName} 👋
           </Text>
         </View>

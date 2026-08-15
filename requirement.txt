@@ -1,0 +1,993 @@
+==================================================
+PROJECT
+Application Name:
+
+PITCHERA
+
+Pitchera is a job-seeker platform that allows users to manage their professional profile, upload resumes, manage job applications, and send personalized job application emails directly from their connected Gmail account.
+
+==================================================
+FRONTEND STACK
+Use ONLY:
+
+React Native
+Expo
+TypeScript
+Expo Router
+React Native Web
+React Hook Form
+Zod
+The SAME Expo project must support:
+
+Android
+iOS
+Web
+DO NOT create a separate React.js web project.
+
+==================================================
+DO NOT USE
+Do NOT use:
+
+Redux
+Redux Toolkit
+Zustand
+MobX
+Recoil
+Jotai
+TanStack Query
+React Query
+Axios
+Any ORM
+Prisma
+Complex state management libraries
+Use:
+
+useState
+useEffect
+useContext
+useMemo
+useCallback
+fetch()
+
+Only use Context API for authentication/session state if required.
+
+==================================================
+IMPORTANT
+The backend is already implemented.
+
+DO NOT create backend code.
+
+DO NOT create Express routes.
+
+DO NOT create MySQL schema.
+
+DO NOT create Prisma schema.
+
+DO NOT create mock APIs.
+
+DO NOT use dummy data.
+
+DO NOT simulate successful email sending.
+
+Use the existing backend REST APIs.
+
+Before writing frontend code:
+
+Inspect the existing backend API structure if backend files are available.
+Identify every existing endpoint.
+Identify request methods.
+Identify request body structures.
+Identify response structures.
+Identify authentication mechanism.
+Identify file upload requirements.
+Identify Gmail OAuth flow.
+Identify scheduled email APIs.
+Use the actual API contracts.
+Do NOT invent endpoint names if the backend already provides them.
+
+==================================================
+FRONTEND PROJECT STRUCTURE
+Create a clean Expo project:
+
+pitchera-mobile/
+
+app/
+components/
+services/
+hooks/
+context/
+constants/
+types/
+utils/
+assets/
+
+Use Expo Router.
+
+==================================================
+API SERVICE
+Create:
+
+services/api.ts
+
+Use native fetch.
+
+Example:
+
+api.get()
+api.post()
+api.put()
+api.patch()
+api.delete()
+
+The API utility should:
+
+Use EXPO_PUBLIC_API_URL
+Add authentication token
+Parse JSON
+Handle HTTP errors
+Handle 401
+Handle refresh token if backend supports it
+Return clean response data
+Do NOT use Axios.
+
+Example environment:
+
+EXPO_PUBLIC_API_URL=https://your-backend-url.com/api
+
+Never hardcode production API URLs inside components.
+
+==================================================
+AUTHENTICATION
+Create:
+
+Login
+Signup
+Forgot Password
+Reset Password
+
+Login screen:
+
+Email
+Password
+Login button
+Continue with Google
+Forgot Password
+Create Account
+
+Signup:
+
+First Name
+Last Name
+Email
+Password
+Confirm Password
+
+Use React Hook Form + Zod.
+
+Show proper inline validation.
+
+==================================================
+GOOGLE LOGIN
+The backend already handles Google authentication.
+
+Integrate with the existing backend Google authentication flow.
+
+Do NOT implement a second authentication system.
+
+After successful authentication:
+
+Store the required session/access token securely.
+
+Use:
+
+expo-secure-store
+
+Do not store access tokens in plain AsyncStorage if SecureStore is supported for that platform.
+
+After login:
+
+Login
+↓
+Authentication
+↓
+Dashboard
+
+==================================================
+AUTH CONTEXT
+Create a minimal:
+
+AuthContext.tsx
+
+Only manage:
+
+user
+access token
+loading
+login
+logout
+restore session
+Do NOT turn AuthContext into a global application state manager.
+
+==================================================
+ROUTING
+Use Expo Router.
+
+Public routes:
+
+/login
+/signup
+/forgot-password
+/reset-password
+
+Protected routes:
+
+/dashboard
+/profile
+/jobs
+/jobs/apply
+/jobs/[id]
+/emails
+/emails/[id]
+/scheduled
+/settings
+/connect-gmail
+
+Implement protected route handling.
+
+Unauthenticated users must not access protected screens.
+
+==================================================
+DASHBOARD
+Create a clean professional dashboard.
+
+Show:
+
+Welcome message
+
+Profile Completion %
+
+Jobs Applied
+
+Emails Sent
+
+Scheduled Emails
+
+Failed Emails
+
+Recent Applications
+
+Upcoming Scheduled Emails
+
+Gmail Connection Status
+
+Quick Apply button
+
+Use actual backend API data.
+
+NO hardcoded statistics.
+
+Handle:
+
+Loading
+Empty
+Error
+Success
+
+==================================================
+PROFILE
+Create a complete editable profile.
+
+Sections:
+
+Personal Information
+
+First Name
+Last Name
+Email
+Phone
+Location
+Profile Photo
+
+Professional Information
+
+Current Job Title
+Current Company
+Total Experience
+Relevant Experience
+Notice Period
+Current Salary
+Expected Salary
+Preferred Locations
+Employment Type
+
+Social Links
+
+LinkedIn
+GitHub
+Portfolio
+
+Skills
+
+Technical Skills
+Soft Skills
+Languages
+
+Education
+
+Multiple education entries.
+
+Experience
+
+Multiple experience entries.
+
+Projects
+
+Multiple project entries.
+
+Certifications
+
+Multiple certification entries.
+
+Resume
+
+Upload Resume
+
+==================================================
+PROFILE COMPLETION
+Display a visually attractive progress bar.
+
+Example:
+
+Profile Completion
+
+████████████████░░░░ 80%
+
+80% Complete
+
+The percentage MUST come from the backend API.
+
+Do NOT calculate a fake percentage.
+
+Use the backend profile completion endpoint if available.
+
+Show missing sections.
+
+Example:
+
+Missing:
+
+Experience
+Projects
+Certifications
+
+Clicking a missing section should navigate to the appropriate profile section.
+
+Update the progress after saving profile information.
+
+==================================================
+RESUME UPLOAD
+Use Expo-compatible file selection.
+
+Support:
+
+PDF
+DOC
+DOCX
+
+Use:
+
+expo-document-picker
+
+Send the file to the existing backend upload API using:
+
+FormData
+
+Do NOT convert the entire file to base64 unless the backend specifically requires it.
+
+Show:
+
+Upload progress if supported
+Uploading
+Success
+Failure
+
+After upload:
+
+Display filename
+File size
+Upload date
+
+Provide:
+
+Replace Resume
+Delete Resume
+Download/View Resume
+
+Use the existing backend endpoints.
+
+==================================================
+RESUME EXTRACTION
+The backend already handles resume extraction.
+
+Frontend flow:
+
+Upload Resume
+↓
+Backend
+↓
+Extraction
+↓
+Return extracted information
+↓
+Frontend displays review form
+
+Show extracted fields in editable inputs.
+
+User can:
+
+Edit
+Accept
+Save
+
+Do NOT overwrite the existing profile automatically.
+
+==================================================
+JOBS APPLIED
+Create Jobs Applied screen.
+
+Display:
+
+Company
+Job Title
+Recruiter
+Recruiter Email
+Applied Date
+Status
+
+Statuses:
+
+Draft
+Scheduled
+Sent
+Failed
+Interview
+Rejected
+Selected
+Offer
+
+Use backend API.
+
+Add:
+
+Search
+Filter
+Sort
+Refresh
+Pagination if backend supports it
+
+==================================================
+APPLY JOB
+Create a complete Apply Job form.
+
+Fields:
+
+Company Name
+Job Title
+Job URL
+Job Description
+
+Recruiter section:
+
+Start with one recruiter row.
+
+Fields:
+
+Recruiter Name
+Recruiter Email
+
+Button:
+
+Add Recruiter
+Clicking it adds another recruiter.
+
+Each row:
+
+Recruiter Name
+Recruiter Email
+Remove
+
+Use React Hook Form field arrays.
+
+Validation:
+
+Required
+Valid email
+Trim whitespace
+Duplicate recruiter email detection
+
+==================================================
+EMAIL TEMPLATE
+At the bottom of the Apply Job page:
+
+☑ Use Default Email Template
+
+Checked by default.
+
+When checked:
+
+Show default template.
+
+Textarea disabled.
+
+When unchecked:
+
+Enable textarea.
+
+User can edit custom email.
+
+Use the template returned by the backend if available.
+
+Support variables:
+
+{{firstName}}
+{{lastName}}
+{{recruiterName}}
+{{company}}
+{{position}}
+{{experience}}
+{{skills}}
+{{phone}}
+{{email}}
+{{linkedin}}
+{{github}}
+{{portfolio}}
+
+==================================================
+EMAIL PREVIEW
+Add:
+
+Preview Email
+
+Display:
+
+To
+Subject
+Body
+Attachments
+
+Allow the user to review before sending.
+
+==================================================
+SEND EMAIL
+Buttons:
+
+Send Now
+
+Schedule Send
+
+When Send Now is clicked:
+
+Validate everything.
+
+Call the REAL backend email API.
+
+The backend will send through Gmail API.
+
+Frontend must NOT pretend the email was sent.
+
+After successful backend response:
+
+Show:
+
+Email sent successfully.
+
+Update application status.
+
+Refresh email history.
+
+==================================================
+MULTIPLE RECRUITERS
+If the user adds:
+
+Recruiter A
+Recruiter B
+Recruiter C
+
+Send the complete array to the backend according to the backend API contract.
+
+Each recruiter must receive an individual email.
+
+Do not use CC/BCC unless the backend specifically supports it.
+
+==================================================
+SCHEDULE SEND
+Create Schedule Send UI.
+
+Fields:
+
+Date
+Time
+Timezone
+
+Show:
+
+Schedule Email
+
+Use the existing backend scheduling API.
+
+Do NOT implement scheduling in the frontend.
+
+Frontend only sends scheduling data to backend.
+
+Backend is responsible for persistent scheduling.
+
+==================================================
+EMAIL HISTORY
+Create:
+
+Email History
+
+Display:
+
+Recipient
+Company
+Position
+Subject
+Status
+Sent Date
+Scheduled Date
+
+Statuses:
+
+Pending
+Scheduled
+Sending
+Sent
+Failed
+Cancelled
+
+Use actual backend data.
+
+==================================================
+SCHEDULED EMAILS
+Create Scheduled screen.
+
+Display:
+
+Recipient
+Company
+Position
+Scheduled Date
+Status
+
+Actions if backend supports:
+
+Cancel
+Reschedule
+View
+
+==================================================
+GMAIL CONNECTION
+Create:
+
+Connect Gmail
+
+Show:
+
+Not Connected
+
+or:
+
+Connected:
+
+user@gmail.com
+
+Button:
+
+Connect Gmail
+
+After connection:
+
+Display connected Gmail account.
+
+Button:
+
+Disconnect Gmail
+
+Use the existing backend Gmail OAuth flow.
+
+IMPORTANT:
+
+The actual email must be sent from the user's connected Gmail account.
+
+Do NOT integrate:
+
+Brevo
+SendGrid
+Mailgun
+EmailJS
+SMTP services
+
+==================================================
+SETTINGS
+Create:
+
+Account
+Connected Gmail
+Notifications
+Theme
+Logout
+
+Theme:
+
+Light
+Dark
+System
+
+==================================================
+WEB + MOBILE UI
+The SAME Expo codebase must work on:
+
+Android
+iOS
+Web
+
+Responsive behavior:
+
+WEB:
+
+Desktop sidebar
+Top header
+Cards
+Tables
+
+MOBILE:
+
+Bottom tabs
+Mobile header
+Cards
+Scrollable lists
+Mobile-friendly forms
+
+Do not duplicate screens unnecessarily.
+
+Use Platform only when a genuine platform difference is required.
+
+==================================================
+DESIGN
+Create a modern premium SaaS UI.
+
+Brand:
+
+PITCHERA
+
+Style:
+
+Clean
+Professional
+Minimal
+Modern
+Job-focused
+Recruiter-focused
+
+Use:
+
+Cards
+Rounded corners
+Good spacing
+Professional typography
+Clear hierarchy
+Subtle animations
+Skeleton loading
+Empty states
+Error states
+Success states
+Confirmation dialogs
+
+Do not make the UI overly complicated.
+
+==================================================
+COMPONENTS
+Create reusable components:
+
+Button
+Input
+PasswordInput
+Select
+Checkbox
+Radio
+Modal
+Card
+Badge
+ProgressBar
+Avatar
+FileUploader
+Loading
+EmptyState
+ErrorState
+Toast
+RecruiterRow
+EmailPreview
+ProfileSection
+StatusBadge
+
+==================================================
+API DATA FLOW
+Keep data flow simple:
+
+Screen
+↓
+fetch()
+↓
+Backend API
+↓
+Response
+↓
+useState()
+↓
+Render UI
+
+Example:
+
+const [profile, setProfile] = useState(null);
+
+useEffect(() => {
+loadProfile();
+}, []);
+
+async function loadProfile() {
+const response = await api.get('/profile');
+setProfile(response.data);
+}
+
+No Redux.
+
+No Zustand.
+
+No React Query.
+
+No Axios.
+
+==================================================
+ERROR HANDLING
+Every API request must handle:
+
+Loading
+Success
+Validation Error
+Authentication Error
+Server Error
+Network Error
+
+Show user-friendly messages.
+
+Never expose technical stack traces.
+
+==================================================
+LOADING STATES
+Every screen that calls an API must have proper loading states.
+
+Use skeletons where appropriate.
+
+Disable buttons while submitting.
+
+Prevent duplicate API requests from repeated button presses.
+
+==================================================
+FORM UX
+All forms should have:
+
+Validation
+Error messages
+Loading state
+Success state
+Unsaved changes handling where useful
+
+Do not clear form data after an API failure.
+
+==================================================
+ACCESSIBILITY
+Use:
+
+Accessible labels
+Accessible buttons
+Readable text
+Proper contrast
+Keyboard-friendly web forms
+
+==================================================
+ENVIRONMENT
+Create:
+
+.env.example
+
+Include:
+
+EXPO_PUBLIC_API_URL=
+
+Do not commit secrets.
+
+==================================================
+PRODUCTION REQUIREMENTS
+Before completing the frontend:
+
+Run:
+
+npx tsc --noEmit
+
+Fix all TypeScript errors.
+
+Run Expo Web.
+
+Run Android.
+
+Check iOS compatibility.
+
+Check:
+
+Navigation
+Authentication
+API calls
+Profile
+Resume upload
+Resume extraction
+Job applications
+Multiple recruiters
+Email template
+Email preview
+Send email
+Schedule email
+Email history
+Gmail connection
+Logout
+
+==================================================
+IMPORTANT BACKEND RULE
+The backend is already complete.
+
+If an API response or endpoint is unclear:
+
+INSPECT THE BACKEND IMPLEMENTATION AND FOLLOW IT.
+
+Do NOT change the backend simply to make frontend implementation easier.
+
+Do NOT invent APIs.
+
+Do NOT create mock APIs.
+
+Do NOT create fake data.
+
+Do NOT duplicate backend business logic.
+
+Frontend should consume the existing backend exactly as it is.
+
+==================================================
+FINAL COMMAND
+Start by:
+
+Inspecting the existing backend API.
+Creating the Expo frontend.
+Configuring Expo Router.
+Creating authentication.
+Creating API service using fetch.
+Creating Dashboard.
+Creating Profile.
+Creating Resume Upload.
+Creating Jobs Applied.
+Creating Apply Job.
+Creating Email Template.
+Creating Email Preview.
+Creating Send/Schedule UI.
+Creating Email History.
+Creating Gmail Connection.
+Creating Settings.
+Making everything responsive for Web + Android + iOS.
+Running TypeScript checks.
+Fixing all frontend errors.
+Do NOT modify the completed backend.
+
+Keep the frontend SIMPLE, CLEAN, DIRECT and PRODUCTION READY.
+
+see attached images and for abv project i have create setup for front end and backend also what i need is give 3 componenets based on abv requirements for frotnend only for applied jobs comp and a add button onclick navigayte add job there add job form and profile and dashboard compo also
+
+
