@@ -25,9 +25,9 @@ export default function AppTabs() {
       />
 
       <Tabs.Screen
-        name="applied-jobs"
+        name="Applications"
         options={{
-          title: 'Applied',
+          title: 'Applications',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="briefcase-outline" size={size} color={color} />
           ),

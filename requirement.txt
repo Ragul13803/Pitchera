@@ -988,6 +988,6 @@ Do NOT modify the completed backend.
 
 Keep the frontend SIMPLE, CLEAN, DIRECT and PRODUCTION READY.
 
-see attached images and for abv project i have create setup for front end and backend also what i need is give 3 componenets based on abv requirements for frotnend only for applied jobs comp and a add button onclick navigayte add job there add job form and profile and dashboard compo also
+see attached images and for abv project i have create setup for front end and backend also what i need is give 3 componenets based on abv requirements for frotnend only for applications comp and a add button onclick navigayte add job there add job form and profile and dashboard compo also
 
 

@@ -26,8 +26,8 @@ function getTitle(pathname: string) {
     return 'Dashboard';
   }
 
-  if (pathname.startsWith('/applied-jobs')) {
-    return 'Applied Jobs List';
+  if (pathname.startsWith('/applications')) {
+    return 'Applications';
   }
 
   if (pathname.startsWith('/profile')) {

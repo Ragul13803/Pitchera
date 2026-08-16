@@ -20,9 +20,9 @@ const menuItems = [
     route: "/dashboard",
   },
   {
-    label: "Applied Jobs",
+    label: "Applications",
     icon: "briefcase-outline" as const,
-    route: "/applied-jobs",
+    route: "/applications",
   },
   {
     label: "Profile",

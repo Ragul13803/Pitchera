@@ -1,4 +1,4 @@
-// src/app/(app)/applied-jobs.tsx
+// src/app/(app)/applications.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext';
-import { api } from '../../services/api';
+import api from '@/services/api';
+import { useTheme } from '@/context/ThemeContext';
 
 // ─── Types (matching DB schema) ───────────────────────────────────────────────
 
@@ -288,7 +288,7 @@ const em = StyleSheet.create({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function AppliedJobsScreen() {
+export default function ApplicationScreen() {
   const router = useRouter();
   const { colors } = useTheme();
 
@@ -340,13 +340,13 @@ export default function AppliedJobsScreen() {
     setFiltered(r);
   }, [applications, search, activeStatus, sort]);
 
-  // ── Quick send (navigate to add-job with pre-filled id) ───────────────────
+  // ── Quick send (navigate to applications/AddApplication with pre-filled id) ───────────────────
 
   const handleSendEmail = (app: JobApplication) => {
-    router.push({ pathname: '/(app)/add-job', params: { applicationId: String(app.id), companyName: app.company_name, jobTitle: app.job_title } });
+    router.push({ pathname: '/(app)/applications/AddApplication', params: { applicationId: String(app.id), companyName: app.company_name, jobTitle: app.job_title } });
   };
 
-  const handleAdd = () => router.push('/(app)/add-job');
+  const handleAdd = () => router.push('/(app)/applications/AddApplication');
 
   // ── Counts ─────────────────────────────────────────────────────────────────
 
@@ -455,7 +455,7 @@ export default function AppliedJobsScreen() {
             <AppCard
               item={item}
               colors={colors}
-              onPress={() => router.push({ pathname: '/(app)/add-job', params: { applicationId: String(item.id) } })}
+              onPress={() => router.push({ pathname: '/(app)/applications/AddApplication', params: { applicationId: String(item.id) } })}
               onSendEmail={() => handleSendEmail(item)}
             />
           )}

@@ -53,9 +53,9 @@ export default function AppLayout() {
       />
 
       <Tabs.Screen
-        name="applied-jobs"
+        name="applications"
         options={{
-          title: "Applied",
+          title: "Applications",
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="briefcase-outline"
