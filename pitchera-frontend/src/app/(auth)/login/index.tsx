@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { Link, router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -145,11 +145,16 @@ export default function Login() {
               </Text>
             </View>
 
-            {/* Terms */}
             <Text style={styles.terms}>
               By continuing, you agree to our{" "}
-              <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
-              <Text style={styles.termsLink}>Privacy Policy</Text>.
+              <Link href="/terms" asChild>
+                <Text style={styles.termsLink}>Terms of Service</Text>
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" asChild>
+                <Text style={styles.termsLink}>Privacy Policy</Text>
+              </Link>
+              .
             </Text>
           </View>
 

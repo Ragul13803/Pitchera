@@ -13,6 +13,7 @@ import profileRoutes from "./routes/profile.routes";
 import gmailRoutes from "./routes/gmail.routes";
 import jobsRoutes from "./routes/jobs.routes";
 import emailRoutes from "./routes/email.routes";
+import applicationRoutes from "./routes/applications.routes";
 
 const app = express();
 
@@ -211,6 +212,9 @@ app.use( "/api/jobs", jobsRoutes );
 
 // Email
 app.use( "/api/emails", emailRoutes );
+
+app.use("/api/applications", applicationRoutes);
+
 
 /**
  * =========================================================

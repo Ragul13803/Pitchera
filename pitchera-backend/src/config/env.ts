@@ -40,7 +40,7 @@ export const env = {
 
   encryptionKey: requireEnv("ENCRYPTION_KEY"),
 
-  frontendUrl: process.env.FRONTEND_URL || "http://localhost:8081",
+  frontendUrl: process.env.FRONTEND_URL || "http://localhost:8082",
   uploadDir: process.env.UPLOAD_DIR || "uploads",
   maxFileSizeMb: parseInt(process.env.MAX_FILE_SIZE_MB || "10", 10),
 };

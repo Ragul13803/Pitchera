@@ -4,7 +4,7 @@
   "description": "Pitchera Backend API",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "nodemon --watch src --ext ts,tsx --exec tsx src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "start:prod": "node dist/server.js",
@@ -44,6 +44,7 @@
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/pdf-parse": "^1.1.5",
     "@types/uuid": "^10.0.0",
+    "nodemon": "^3.1.14",
     "tsx": "^4.16.2",
     "typescript": "^5.5.3"
   }

@@ -33,13 +33,23 @@ export function getGoogleLoginUrl(state?: string): string {
 }
 
 export function getGmailAuthUrl(userId: number): string {
-  const client = getGmailOAuthClient();
-  return client.generateAuthUrl({
+  const oauth2Client = getGmailOAuthClient();
+
+  const url = oauth2Client.generateAuthUrl({
     access_type: "offline",
-    scope: ["https://www.googleapis.com/auth/gmail.send"],
-    prompt: "consent",
+    scope: [
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/userinfo.email",
+    ],
     state: String(userId),
+    prompt: "consent",
   });
+
+  // ❌ REMOVE these debug lines
+  // console.log("[Google OAuth] Generated Auth URL:", url);
+  // console.log("[Google OAuth] Redirect URI in use:", process.env.GOOGLE_REDIRECT_URI);
+
+  return url;
 }
 
 // Existing web flow
@@ -127,28 +137,43 @@ export async function exchangeGmailCode(code: string): Promise<{
   gmailAddress: string;
 }> {
   const client = getGmailOAuthClient();
-  const { tokens } = await client.getToken(code);
 
-  if (!tokens.refresh_token) {
-    throw new Error(
-      "No refresh token received. Please revoke access and try again."
+  try {
+    console.log("[Gmail OAuth] Starting token exchange");
+
+    const { tokens } = await client.getToken(code);
+
+    console.log("[Gmail OAuth] Token exchange successful");
+
+    if (!tokens.refresh_token) {
+      throw new Error(
+        "No refresh token received. Please revoke access and try again."
+      );
+    }
+
+    client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ version: "v2", auth: client });
+    const { data } = await oauth2.userinfo.get();
+
+    if (!data.email) {
+      throw new Error("Failed to get Gmail address");
+    }
+
+    return {
+      accessToken: tokens.access_token!,
+      refreshToken: tokens.refresh_token,
+      tokenExpiry: tokens.expiry_date
+        ? new Date(tokens.expiry_date)
+        : null,
+      gmailAddress: data.email,
+    };
+  } catch (error: any) {
+    console.error(
+      "[Gmail OAuth] Token exchange failed:",
+      error?.response?.data || error.message
     );
+
+    throw error;
   }
-
-  client.setCredentials(tokens);
-
-  // Get Gmail address
-  const oauth2 = google.oauth2({ version: "v2", auth: client });
-  const { data } = await oauth2.userinfo.get();
-
-  if (!data.email) {
-    throw new Error("Failed to get Gmail address");
-  }
-
-  return {
-    accessToken: tokens.access_token!,
-    refreshToken: tokens.refresh_token,
-    tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-    gmailAddress: data.email,
-  };
 }

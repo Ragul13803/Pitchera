@@ -11,7 +11,9 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+
 import BOT_IMAGE from '@/assets/images/bluebot.png';
+import GOOGLE_IMAGE from '@/assets/images/google.png';
 
 interface ChatWindowProps {
   onClose: () => void;
@@ -45,12 +47,18 @@ const COLORS = {
   white: '#FFFFFF',
 };
 
-const MOCK_RESPONSES = [
+const MOCK_AI_RESPONSES = [
   'Thanks for your message! I’m here to help you.',
   'That’s a great question. Let me help you with that.',
   'Sure! I can help you with that. This is a mock response for now.',
   'Got it! Your request has been received successfully.',
   'Thanks for reaching out. How else can I assist you?',
+];
+
+const MOCK_GOOGLE_RESPONSES = [
+  '🔎 Google Search mode is selected. Your search results will appear here once the Google Search API is connected.',
+  '🔎 I’m ready to search Google for you. Connect your search API to return live results.',
+  '🔎 Search mode is active. Enter your query and I’ll search the web once the API is connected.',
 ];
 
 const SUGGESTIONS = [
@@ -92,6 +100,8 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const [searchMode, setSearchMode] = useState<'ai' | 'google'>('ai');
+
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -122,10 +132,23 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
     setIsLoading(true);
 
     setTimeout(() => {
-      const response =
-        MOCK_RESPONSES[
-          Math.floor(Math.random() * MOCK_RESPONSES.length)
-        ];
+      let response: string;
+
+      if (searchMode === 'google') {
+        response =
+          MOCK_GOOGLE_RESPONSES[
+            Math.floor(
+              Math.random() * MOCK_GOOGLE_RESPONSES.length,
+            )
+          ];
+      } else {
+        response =
+          MOCK_AI_RESPONSES[
+            Math.floor(
+              Math.random() * MOCK_AI_RESPONSES.length,
+            )
+          ];
+      }
 
       const botMessage: Message = {
         id: `${Date.now()}-bot`,
@@ -138,29 +161,52 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
     }, 900);
   };
 
+  const handleModeChange = (mode: 'ai' | 'google') => {
+    if (isLoading) {
+      return;
+    }
+
+    setSearchMode(mode);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-mode`,
+        sender: 'bot',
+        text:
+          mode === 'ai'
+            ? '🤖 Pitchera AI mode is now active.'
+            : '🔎 Google Search mode is now active.',
+      },
+    ]);
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={
-        Platform.OS === 'ios'
-          ? 'padding'
-          : undefined
-      }
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.headerGlow} />
 
         <View style={styles.headerContent}>
+          {/* LEFT SIDE */}
           <View style={styles.headerLeft}>
             <View style={styles.avatarWrapper}>
               <Image
-                source={BOT_IMAGE}
+                source={searchMode === 'google' ? GOOGLE_IMAGE : BOT_IMAGE}
                 style={styles.avatar}
                 resizeMode="contain"
               />
 
-              <View style={styles.onlineIndicator} />
+              <View
+                style={[
+                  styles.onlineIndicator,
+                  searchMode === 'google' &&
+                    styles.googleIndicator,
+                ]}
+              />
             </View>
 
             <View style={styles.headerText}>
@@ -171,7 +217,9 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
                 ]}
                 numberOfLines={1}
               >
-                Pitchera AI
+                {searchMode === 'ai'
+                  ? 'Pitchera AI'
+                  : 'Google Search'}
               </Text>
 
               <View style={styles.statusRow}>
@@ -186,26 +234,92 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
                   ]}
                 />
 
-                <Text style={styles.statusText}>
+                <Text
+                  style={styles.statusText}
+                  numberOfLines={1}
+                >
                   {isLoading
-                    ? 'Thinking...'
-                    : 'Online • Ready to help'}
+                    ? searchMode === 'ai'
+                      ? 'Thinking...'
+                      : 'Searching...'
+                    : searchMode === 'ai'
+                      ? 'AI • Ready to help'
+                      : 'Search • Ready'}
                 </Text>
               </View>
             </View>
           </View>
 
-          <Pressable
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Close chat"
-            style={({ pressed }) => [
-              styles.closeButton,
-              pressed && styles.closePressed,
-            ]}
-          >
-            <Text style={styles.closeText}>×</Text>
-          </Pressable>
+          {/* RIGHT SIDE */}
+          <View style={styles.headerActions}>
+            {/* AI / GOOGLE TOGGLE */}
+            <View style={styles.modeToggle}>
+              <Pressable
+                onPress={() => handleModeChange('ai')}
+                disabled={isLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Use Pitchera AI"
+                style={({ pressed }) => [
+                  styles.modeButton,
+                  searchMode === 'ai' &&
+                    styles.modeButtonActive,
+                  pressed &&
+                    !isLoading &&
+                    styles.modeButtonPressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modeText,
+                    searchMode === 'ai' &&
+                      styles.modeTextActive,
+                  ]}
+                >
+                  AI
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() =>
+                  handleModeChange('google')
+                }
+                disabled={isLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Use Google Search"
+                style={({ pressed }) => [
+                  styles.modeButton,
+                  searchMode === 'google' &&
+                    styles.modeButtonActive,
+                  pressed &&
+                    !isLoading &&
+                    styles.modeButtonPressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modeText,
+                    searchMode === 'google' &&
+                      styles.modeTextActive,
+                  ]}
+                >
+                  Google
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* CLOSE BUTTON */}
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close chat"
+              style={({ pressed }) => [
+                styles.closeButton,
+                pressed && styles.closePressed,
+              ]}
+            >
+              <Text style={styles.closeText}>×</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -218,14 +332,18 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
+        {/* TODAY */}
         <View style={styles.welcomeLabel}>
           <View style={styles.welcomeLine} />
+
           <Text style={styles.welcomeText}>
             TODAY
           </Text>
+
           <View style={styles.welcomeLine} />
         </View>
 
+        {/* MESSAGE LIST */}
         {messages.map((message) => (
           <View
             key={message.id}
@@ -241,6 +359,7 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
                 <Image
                   source={BOT_IMAGE}
                   style={styles.messageAvatar}
+                  resizeMode="contain"
                 />
               </View>
             )}
@@ -278,7 +397,9 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
               </View>
 
               <Text style={styles.suggestionTitle}>
-                QUICK QUESTIONS
+                {searchMode === 'ai'
+                  ? 'QUICK QUESTIONS'
+                  : 'QUICK SEARCHES'}
               </Text>
             </View>
 
@@ -314,13 +435,14 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
           </View>
         )}
 
-        {/* TYPING */}
+        {/* TYPING / SEARCHING */}
         {isLoading && (
           <View style={styles.messageRow}>
             <View style={styles.messageAvatarWrapper}>
               <Image
                 source={BOT_IMAGE}
                 style={styles.messageAvatar}
+                resizeMode="contain"
               />
             </View>
 
@@ -341,8 +463,12 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
             onChangeText={setInput}
             placeholder={
               isLoading
-                ? 'AI is thinking...'
-                : 'Ask anything...'
+                ? searchMode === 'ai'
+                  ? 'AI is thinking...'
+                  : 'Searching Google...'
+                : searchMode === 'ai'
+                  ? 'Ask Pitchera AI...'
+                  : 'Search Google...'
             }
             placeholderTextColor={COLORS.textMuted}
             multiline
@@ -357,8 +483,12 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
 
           <Pressable
             onPress={() => sendMessage(input)}
-            disabled={
-              !input.trim() || isLoading
+            disabled={!input.trim() || isLoading}
+            accessibilityRole="button"
+            accessibilityLabel={
+              searchMode === 'ai'
+                ? 'Send message'
+                : 'Search Google'
             }
             style={({ pressed }) => [
               styles.sendButton,
@@ -375,7 +505,9 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
         </View>
 
         <Text style={styles.inputHint}>
-          AI responses may not always be accurate
+          {searchMode === 'ai'
+            ? 'AI responses may not always be accurate'
+            : 'Google Search mode • Search results require API integration'}
         </Text>
       </View>
     </KeyboardAvoidingView>
@@ -388,7 +520,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
+  // =========================================================
   // HEADER
+  // =========================================================
+
   header: {
     height: 88,
     overflow: 'hidden',
@@ -407,7 +542,7 @@ const styles = StyleSheet.create({
 
   headerContent: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -417,7 +552,8 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 8,
+    minWidth: 0,
   },
 
   avatarWrapper: {
@@ -430,7 +566,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
 
-    marginRight: 12,
+    marginRight: 10,
 
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)',
@@ -467,8 +603,13 @@ const styles = StyleSheet.create({
     borderColor: COLORS.white,
   },
 
+  googleIndicator: {
+    backgroundColor: '#4285F4',
+  },
+
   headerText: {
     flex: 1,
+    minWidth: 0,
   },
 
   title: {
@@ -480,12 +621,13 @@ const styles = StyleSheet.create({
   },
 
   titleSmall: {
-    fontSize: 15,
+    fontSize: 14,
   },
 
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 0,
   },
 
   statusDot: {
@@ -496,9 +638,66 @@ const styles = StyleSheet.create({
   },
 
   statusText: {
+    flex: 1,
     color: 'rgba(255,255,255,0.78)',
-    fontSize: 11.5,
+    fontSize: 10.5,
     fontWeight: '500',
+  },
+
+  // =========================================================
+  // HEADER ACTIONS
+  // =========================================================
+
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
+  modeToggle: {
+    height: 34,
+
+    flexDirection: 'row',
+    alignItems: 'center',
+
+    padding: 3,
+
+    borderRadius: 18,
+
+    backgroundColor: 'rgba(255,255,255,0.14)',
+
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+
+  modeButton: {
+    height: 28,
+
+    paddingHorizontal: 9,
+
+    borderRadius: 14,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  modeButtonActive: {
+    backgroundColor: COLORS.white,
+  },
+
+  modeButtonPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.96 }],
+  },
+
+  modeText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+
+  modeTextActive: {
+    color: COLORS.primary,
   },
 
   closeButton: {
@@ -527,7 +726,10 @@ const styles = StyleSheet.create({
     lineHeight: 27,
   },
 
+  // =========================================================
   // MESSAGES
+  // =========================================================
+
   messagesContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -648,7 +850,10 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
 
+  // =========================================================
   // SUGGESTIONS
+  // =========================================================
+
   suggestionsContainer: {
     marginTop: 4,
     marginBottom: 12,
@@ -743,7 +948,10 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
 
+  // =========================================================
   // TYPING
+  // =========================================================
+
   typingBubble: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -770,7 +978,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
 
+  // =========================================================
   // INPUT
+  // =========================================================
+
   inputSection: {
     paddingHorizontal: 12,
     paddingTop: 9,
