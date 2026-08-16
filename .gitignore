@@ -1,1 +1,12 @@
-pitchera-backend/.env
+# Environment variables
+.env
+.env.*
+
+# Node dependencies
+node_modules/
+
+# Temporary uploads
+uploads/temp/
+
+# Build output
+dist/
