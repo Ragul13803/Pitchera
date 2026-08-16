@@ -9,7 +9,7 @@ export function useLogout() {
     try {
       await logout();
     } finally {
-      router.replace("/login");
+      router.replace("/");
     }
   }, [logout]);
 

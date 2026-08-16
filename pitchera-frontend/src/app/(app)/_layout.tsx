@@ -24,7 +24,7 @@ export default function AppLayout() {
 
   // No access token OR no user → login
   if (!isAuthenticated) {
-    return <Redirect href="/login" />;
+    return <Redirect href="/" />;
   }
 
   // Authenticated → render protected app
