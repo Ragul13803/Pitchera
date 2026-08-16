@@ -4,6 +4,7 @@ import { testConnection } from "./database/db";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { startScheduler, stopScheduler } from "./services/scheduler.service";
 
 async function start(): Promise<void> {
   // Ensure upload directories exist
@@ -20,7 +21,7 @@ async function start(): Promise<void> {
   // Test DB connection
   await testConnection();
 
-  app.listen(env.port, "0.0.0.0", () => {
+  const server = app.listen(env.port, "0.0.0.0", () => {
     console.log(`🚀 Pitchera API running on port http://localhost:${env.port}`);
     console.log(`📍 Environment: ${env.nodeEnv}`);
     console.log(`🌐 Frontend URL: ${env.frontendUrl}`);
@@ -38,8 +39,28 @@ async function start(): Promise<void> {
       }
     }
 
-    console.log("");
+    startScheduler();
   });
+
+  // Graceful shutdown
+  const shutdown = (signal: string) => {
+    console.log(`\n${signal} received. Shutting down gracefully...`);
+
+    stopScheduler();
+
+    server.close((err) => {
+      if (err) {
+        console.error("❌ Error while closing server:", err);
+        process.exit(1);
+      }
+
+      console.log("✅ Server closed.");
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
 start().catch((err) => {

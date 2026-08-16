@@ -26,9 +26,9 @@ export function Avatar({
           },
         ]}
         resizeMode="cover"
-        onLoad={() => {
-          console.log('Avatar loaded:', uri);
-        }}
+        // onLoad={() => {
+        //   console.log('Avatar loaded:', uri);
+        // }}
         onError={(error) => {
           console.log(
             'Avatar failed to load:',

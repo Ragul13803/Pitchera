@@ -14,7 +14,7 @@ const items = [
     route: '/dashboard',
   },
   {
-    label: 'Applied',
+    label: 'Applied Jobs',
     icon: 'briefcase-outline' as const,
     route: '/applied-jobs',
   },

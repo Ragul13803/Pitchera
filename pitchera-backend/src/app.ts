@@ -13,6 +13,11 @@ import profileRoutes from "./routes/profile.routes";
 import gmailRoutes from "./routes/gmail.routes";
 import jobsRoutes from "./routes/jobs.routes";
 import emailRoutes from "./routes/email.routes";
+import resumeRoutes from "./routes/resume.routes";
+import applicationRoutes from "./routes/applications.routes";
+import emailTemplateRoutes from "./routes/email-templates.routes";
+import { startScheduler } from "./services/scheduler.service";
+
 
 const app = express();
 
@@ -211,6 +216,11 @@ app.use( "/api/jobs", jobsRoutes );
 
 // Email
 app.use( "/api/emails", emailRoutes );
+
+app.use('/api/resume', resumeRoutes);
+
+app.use("/api/applications", applicationRoutes);
+app.use("/api/email-templates", emailTemplateRoutes);
 
 /**
  * =========================================================

@@ -58,10 +58,7 @@ export function TopBar() {
         }
 
         const parsedUser: User = JSON.parse(storedUser);
-
-        console.log('TopBar user:', parsedUser);
-        console.log('TopBar avatarUrl:', parsedUser.avatarUrl);
-
+        
         setUser(parsedUser);
       } catch (error) {
         console.error(
