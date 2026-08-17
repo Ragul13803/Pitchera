@@ -4,7 +4,7 @@
     "slug": "pitchera",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/pitchera_logo_circle.png",
     "scheme": "pitcherafrontend",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -22,7 +22,7 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/pitchera_logo_circle.png"
     },
     "plugins": [
       "expo-router",

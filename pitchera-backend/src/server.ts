@@ -21,7 +21,7 @@ async function start(): Promise<void> {
   await testConnection();
 
   app.listen(env.port, "0.0.0.0", () => {
-    console.log(`🚀 Pitchera API running on port http://localhost:${env.port}`);
+    console.log(`🚀 Pitchera API running on port http://localhost:${env.port}/api`);
     console.log(`📍 Environment: ${env.nodeEnv}`);
     console.log(`🌐 Frontend URL: ${env.frontendUrl}`);
 
@@ -33,7 +33,7 @@ async function start(): Promise<void> {
     for (const [name, addresses] of Object.entries(interfaces)) {
       for (const address of addresses ?? []) {
         if (address.family === "IPv4" && !address.internal) {
-          console.log(`  ${name}: http://${address.address}:${env.port}`);
+          console.log(`  ${name}: http://${address.address}:${env.port}/api`);
         }
       }
     }

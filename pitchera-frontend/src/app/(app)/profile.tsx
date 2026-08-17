@@ -14,7 +14,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { useLogout } from "@/hooks/useLogout";
 import PopupModal from "@/components/PopupModal";
-import { Loading } from "@/components/ui/Loading";
 
 interface PitcheraUser {
   id: number;
@@ -58,7 +57,18 @@ export default function ProfileScreen() {
   };
 
   if (loading) {
-    return <Loading message="Loading..." />;
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.background,
+          },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
   }
 
   if (!user) {
@@ -146,7 +156,10 @@ export default function ProfileScreen() {
           {/* Profile Avatar */}
           <View style={styles.avatarSection}>
             {user.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+              <Image
+                source={{ uri: user.avatarUrl }}
+                style={styles.avatar}
+              />
             ) : (
               <View
                 style={[
@@ -184,7 +197,11 @@ export default function ProfileScreen() {
               </Text>
 
               {user.isEmailVerified && (
-                <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={18}
+                  color="#10B981"
+                />
               )}
             </View>
           </View>
@@ -379,7 +396,7 @@ export default function ProfileScreen() {
             </View>
 
             {/* Email Verification */}
-            {/* <View style={styles.infoRow}>
+            <View style={styles.infoRow}>
               <View
                 style={[
                   styles.iconBox,
@@ -397,7 +414,11 @@ export default function ProfileScreen() {
                       : "alert-circle-outline"
                   }
                   size={20}
-                  color={user.isEmailVerified ? "#10B981" : "#F59E0B"}
+                  color={
+                    user.isEmailVerified
+                      ? "#10B981"
+                      : "#F59E0B"
+                  }
                 />
               </View>
 
@@ -417,14 +438,18 @@ export default function ProfileScreen() {
                   style={[
                     styles.value,
                     {
-                      color: user.isEmailVerified ? "#10B981" : "#F59E0B",
+                      color: user.isEmailVerified
+                        ? "#10B981"
+                        : "#F59E0B",
                     },
                   ]}
                 >
-                  {user.isEmailVerified ? "Verified" : "Not Verified"}
+                  {user.isEmailVerified
+                    ? "Verified"
+                    : "Not Verified"}
                 </Text>
               </View>
-            </View> */}
+            </View>
           </View>
 
           {/* Logout Button */}
@@ -435,9 +460,15 @@ export default function ProfileScreen() {
               pressed && styles.logoutButtonPressed,
             ]}
           >
-            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Ionicons
+              name="log-out-outline"
+              size={20}
+              color="#EF4444"
+            />
 
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={styles.logoutText}>
+              Logout
+            </Text>
           </Pressable>
         </ScrollView>
       </View>
