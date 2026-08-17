@@ -1,8 +1,5 @@
 import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
-
-WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_CONFIG = {
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',

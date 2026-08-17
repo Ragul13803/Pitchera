@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Pressable,
@@ -8,16 +7,12 @@ import {
   Text,
 } from 'react-native';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
-import { Colors } from '@/constants/theme';
 import api from '@/services/api';
 import { ApiError } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { Loading } from './ui/Loading';
-
-WebBrowser.maybeCompleteAuthSession();
 
 interface GoogleLoginButtonProps {
   onLoading?: (loading: boolean) => void;

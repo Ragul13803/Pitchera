@@ -1,13 +1,23 @@
-import { Platform, ActivityIndicator, View } from "react-native";
-import { Redirect, Slot, Tabs } from "expo-router";
+import {
+  ActivityIndicator,
+  Platform,
+  View,
+} from "react-native";
+import {
+  Redirect,
+  Slot,
+  Tabs,
+} from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppShell } from "@/components/appshell";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AppLayout() {
-  const { isLoading, isAuthenticated } = useAuth();
+  const {
+    isLoading,
+    isAuthenticated,
+  } = useAuth();
 
-  // Wait until localStorage / SecureStore has been checked
   if (isLoading) {
     return (
       <View
@@ -22,12 +32,10 @@ export default function AppLayout() {
     );
   }
 
-  // No access token OR no user → login
   if (!isAuthenticated) {
     return <Redirect href="/" />;
   }
 
-  // Authenticated → render protected app
   if (Platform.OS === "web") {
     return (
       <AppShell>
@@ -37,12 +45,19 @@ export default function AppLayout() {
   }
 
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
       <Tabs.Screen
         name="dashboard"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
             <Ionicons
               name="home-outline"
               size={size}
@@ -56,7 +71,10 @@ export default function AppLayout() {
         name="applications"
         options={{
           title: "Applications",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
             <Ionicons
               name="briefcase-outline"
               size={size}
@@ -70,7 +88,10 @@ export default function AppLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
             <Ionicons
               name="person-outline"
               size={size}
