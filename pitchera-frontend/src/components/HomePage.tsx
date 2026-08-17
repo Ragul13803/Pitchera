@@ -6,17 +6,14 @@ import {
   Text,
   View,
   Image,
-  useWindowDimensions,
 } from "react-native";
 import { Link, router } from "expo-router";
 import PITCHERA_FULL_LOGO from "@/assets/images/pitchera_full_logo.png";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 export default function HomePage() {
-  const { width } = useWindowDimensions();
 
-  const isMobile = width < 600;
-  const isTablet = width >= 600 && width < 900;
-  const isDesktop = width >= 900;
+  const {isMobile, width } = useDeviceType();
 
   const handleGetStarted = () => {
     router.push("/login");
@@ -35,11 +32,15 @@ export default function HomePage() {
           style={getHeaderStyle(width)}
         >
           <Pressable onPress={() => router.push("/")}>
-            <Image
-              source={PITCHERA_FULL_LOGO}
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
+            <View style={styles.brand}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={PITCHERA_FULL_LOGO}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
           </Pressable>
 
           {!isMobile ? (
@@ -543,11 +544,15 @@ export default function HomePage() {
       {/* ================= FOOTER ================= */}
 
       <View style={styles.footer}>
-        <Image
-          source={PITCHERA_FULL_LOGO}
-          style={styles.footerLogo}
-          resizeMode="contain"
-        />
+          <View style={styles.brand}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={PITCHERA_FULL_LOGO}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
 
         <Text style={styles.footerDescription}>
           A focused workspace for managing your professional
@@ -948,6 +953,7 @@ function getHeroButtonsStyle(isMobile: boolean) {
     alignItems: "center" as const,
     width: isMobile ? "100%" as const : undefined,
     marginTop: 34,
+    gap: 10
   };
 }
 
@@ -1979,4 +1985,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 18,
   },
+    brand: {
+    width: "100%",
+    alignItems: "center",
+    // marginBottom: 24,
+  },
+
+  logoContainer: {
+    width: 220,
+    height: 70,
+
+    borderRadius: 8,
+
+    overflow: "hidden",
+
+    backgroundColor: "#F8FAFC",
+
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  logoImage: {
+    width: "100%",
+    height: "100%",
+  },
+
 });
