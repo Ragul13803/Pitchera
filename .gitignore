@@ -10,3 +10,5 @@ uploads/temp/
 
 # Build output
 dist/
+
+pitchera-backend/dist/
