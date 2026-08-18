@@ -14,8 +14,6 @@ import { sendSuccess, sendError } from "../utils/response";
 import path from "path";
 import { getSmartSalutation } from "../utils/email";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface RecruiterInput {
   name?: string | null;
   email: string;
@@ -34,40 +32,22 @@ interface SchedulePayload extends SendPayload {
   timezone?: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function validateRecruiters(recruiters: RecruiterInput[]): string | null {
   if (!recruiters || recruiters.length === 0) {
     return "At least one recruiter is required.";
   }
-
   const seen = new Set<string>();
-
   for (let i = 0; i < recruiters.length; i++) {
     const r = recruiters[i];
-
-    if (!r.email?.trim()) {
-      return `Recruiter ${i + 1}: Email is required.`;
-    }
-
+    if (!r.email?.trim()) return `Recruiter ${i + 1}: Email is required.`;
     const emailLower = r.email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(emailLower)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLower)) {
       return `Recruiter ${i + 1}: "${r.email}" is not a valid email address.`;
     }
-
-    if (seen.has(emailLower)) {
-      return `Duplicate recruiter email: ${emailLower}`;
-    }
-
+    if (seen.has(emailLower)) return `Duplicate recruiter email: ${emailLower}`;
     seen.add(emailLower);
-
-    if (!r.position?.trim()) {
-      return `Recruiter ${i + 1}: Position is required.`;
-    }
+    if (!r.position?.trim()) return `Recruiter ${i + 1}: Position is required.`;
   }
-
   return null;
 }
 
@@ -82,15 +62,12 @@ async function buildTemplateVars(userId: number) {
      WHERE u.id = ?`,
     [userId]
   );
-
   const [skillRows] = await pool.query<RowDataPacket[]>(
     `SELECT name FROM skills WHERE user_id = ? AND type = 'technical' LIMIT 10`,
     [userId]
   );
-
   const user = users[0] || {};
   const skills = skillRows.map((s: RowDataPacket) => s.name).join(", ");
-
   return {
     firstName: user.first_name || "",
     lastName: user.last_name || "",
@@ -109,25 +86,16 @@ async function buildTemplateVars(userId: number) {
 
 async function getPrimaryResumePath(userId: number): Promise<string | null> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT file_path FROM resumes
-     WHERE user_id = ? AND is_primary = 1 LIMIT 1`,
+    `SELECT file_path FROM resumes WHERE user_id = ? AND is_primary = 1 LIMIT 1`,
     [userId]
   );
-
-  if (rows.length > 0) {
-    return path.resolve(process.cwd(), rows[0].file_path);
-  }
+  if (rows.length > 0) return path.resolve(process.cwd(), rows[0].file_path);
 
   const [anyRows] = await pool.query<RowDataPacket[]>(
-    `SELECT file_path FROM resumes
-     WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+    `SELECT file_path FROM resumes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
     [userId]
   );
-
-  if (anyRows.length > 0) {
-    return path.resolve(process.cwd(), anyRows[0].file_path);
-  }
-
+  if (anyRows.length > 0) return path.resolve(process.cwd(), anyRows[0].file_path);
   return null;
 }
 
@@ -143,31 +111,17 @@ export async function sendApplication(
     const body: SendPayload = req.body;
 
     const recruiterError = validateRecruiters(body.recruiters);
-    if (recruiterError) {
-      sendError(res, recruiterError, 400);
-      return;
-    }
+    if (recruiterError) { sendError(res, recruiterError, 400); return; }
 
-    if (!body.emailBody?.trim()) {
-      sendError(res, "Email body is required.", 400);
-      return;
-    }
-
-    if (!body.emailSubject?.trim()) {
-      sendError(res, "Email subject is required.", 400);
-      return;
-    }
+    if (!body.emailBody?.trim()) { sendError(res, "Email body is required.", 400); return; }
+    if (!body.emailSubject?.trim()) { sendError(res, "Email subject is required.", 400); return; }
 
     let gmailAccountId: number;
     try {
       const { account } = await getGmailClient(userId);
       gmailAccountId = account.id;
     } catch {
-      sendError(
-        res,
-        "Gmail is not connected. Please connect your Gmail account before sending.",
-        403
-      );
+      sendError(res, "Gmail is not connected. Please connect Gmail before sending.", 403);
       return;
     }
 
@@ -176,21 +130,18 @@ export async function sendApplication(
     const firstPosition = body.recruiters[0].position.trim();
 
     const [appResult] = await pool.query<ResultSetHeader>(
-      `INSERT INTO job_applications
-         (user_id, company_name, job_title, status)
-       VALUES (?, ?, ?, 'draft')`,
+      `INSERT INTO job_applications (user_id, company_name, job_title, status)
+       VALUES (?, ?, ?, 'applied')`,
       [userId, "Direct Outreach", firstPosition]
     );
-
     const jobApplicationId = appResult.insertId;
 
-    // ── Service handles salutation + To: header logic internally ────────────
     const results = await sendJobApplicationEmails({
       userId,
       jobApplicationId,
       gmailAccountId,
       recruiters: body.recruiters.map((r) => ({
-        name: r.name?.trim() || null,
+        name: r.name?.trim() || null,       // null if empty — only for salutation
         email: r.email.trim().toLowerCase(),
         position: r.position.trim(),
       })),
@@ -204,21 +155,14 @@ export async function sendApplication(
       sendSuccess(
         res,
         { sent: results.sent, failed: 0, errors: [], jobApplicationId },
-        results.sent === 1
-          ? "Email sent successfully."
-          : `${results.sent} emails sent successfully.`
+        results.sent === 1 ? "Email sent successfully." : `${results.sent} emails sent successfully.`
       );
     } else if (results.sent === 0) {
-      sendError(res, `All emails failed to send.\n${results.errors.join("\n")}`, 500);
+      sendError(res, `All emails failed.\n${results.errors.join("\n")}`, 500);
     } else {
       sendSuccess(
         res,
-        {
-          sent: results.sent,
-          failed: results.failed,
-          errors: results.errors,
-          jobApplicationId,
-        },
+        { sent: results.sent, failed: results.failed, errors: results.errors, jobApplicationId },
         `${results.sent} sent, ${results.failed} failed.`
       );
     }
@@ -239,39 +183,16 @@ export async function scheduleApplication(
     const body: SchedulePayload = req.body;
 
     const recruiterError = validateRecruiters(body.recruiters);
-    if (recruiterError) {
-      sendError(res, recruiterError, 400);
-      return;
-    }
+    if (recruiterError) { sendError(res, recruiterError, 400); return; }
 
-    if (!body.emailBody?.trim()) {
-      sendError(res, "Email body is required.", 400);
-      return;
-    }
-
-    if (!body.emailSubject?.trim()) {
-      sendError(res, "Email subject is required.", 400);
-      return;
-    }
-
-    if (!body.scheduledFor) {
-      sendError(res, "Scheduled date/time is required.", 400);
-      return;
-    }
+    if (!body.emailBody?.trim()) { sendError(res, "Email body is required.", 400); return; }
+    if (!body.emailSubject?.trim()) { sendError(res, "Email subject is required.", 400); return; }
+    if (!body.scheduledFor) { sendError(res, "Scheduled date/time is required.", 400); return; }
 
     const scheduledAt = new Date(body.scheduledFor);
-
-    if (isNaN(scheduledAt.getTime())) {
-      sendError(res, "Invalid scheduled date/time format.", 400);
-      return;
-    }
-
+    if (isNaN(scheduledAt.getTime())) { sendError(res, "Invalid scheduled date/time.", 400); return; }
     if (scheduledAt.getTime() <= Date.now() + 60_000) {
-      sendError(
-        res,
-        "Scheduled time must be at least 1 minute in the future.",
-        400
-      );
+      sendError(res, "Scheduled time must be at least 1 minute in the future.", 400);
       return;
     }
 
@@ -280,11 +201,7 @@ export async function scheduleApplication(
       const { account } = await getGmailClient(userId);
       gmailAccountId = account.id;
     } catch {
-      sendError(
-        res,
-        "Gmail is not connected. Please connect your Gmail account before scheduling.",
-        403
-      );
+      sendError(res, "Gmail is not connected. Please connect Gmail before scheduling.", 403);
       return;
     }
 
@@ -293,37 +210,32 @@ export async function scheduleApplication(
     const firstPosition = body.recruiters[0].position.trim();
 
     const [appResult] = await pool.query<ResultSetHeader>(
-      `INSERT INTO job_applications
-         (user_id, company_name, job_title, status)
+      `INSERT INTO job_applications (user_id, company_name, job_title, status)
        VALUES (?, ?, ?, 'scheduled')`,
       [userId, "Direct Outreach", firstPosition]
     );
-
     const jobApplicationId = appResult.insertId;
 
     const scheduledIds: number[] = [];
 
     for (const recruiter of body.recruiters) {
-      // ── Smart salutation for BODY — resolved NOW at schedule time ───────
+      // Salutation resolved NOW — snapshot of current state
       const salutation = getSmartSalutation(recruiter.name, recruiter.email);
 
       const vars = {
         ...templateVarsBase,
         position: recruiter.position.trim(),
-        recruiterName: salutation,
+        recruiterName: salutation, // → "Dear John," / "Dear Hiring Team," etc.
       };
 
       const personalizedSubject = replaceTemplateVariables(body.emailSubject, vars);
       const personalizedBody = replaceTemplateVariables(body.emailBody, vars);
 
-      // ── Raw name (or null) — used later by scheduler for Gmail "To:" ────
-      const recipientName = recruiter.name?.trim() || null;
-
       const id = await scheduleEmail({
         userId,
         jobApplicationId,
         gmailAccountId,
-        recipientName,
+        recipientName: recruiter.name?.trim() || null, // for DB records only
         recipientEmail: recruiter.email.trim().toLowerCase(),
         subject: personalizedSubject,
         body: personalizedBody,
@@ -335,18 +247,10 @@ export async function scheduleApplication(
     }
 
     const total = body.recruiters.length;
-
     sendSuccess(
       res,
-      {
-        scheduled: total,
-        scheduledAt: scheduledAt.toISOString(),
-        scheduledIds,
-        jobApplicationId,
-      },
-      total === 1
-        ? "Email scheduled successfully."
-        : `${total} emails scheduled successfully.`
+      { scheduled: total, scheduledAt: scheduledAt.toISOString(), scheduledIds, jobApplicationId },
+      total === 1 ? "Email scheduled successfully." : `${total} emails scheduled successfully.`
     );
   } catch (error) {
     next(error);

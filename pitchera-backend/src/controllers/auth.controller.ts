@@ -64,14 +64,36 @@ export async function refreshToken(
   next: NextFunction
 ): Promise<void> {
   try {
+    console.log("========== REFRESH TOKEN REQUEST ==========");
+    console.log("Method:", req.method);
+    console.log("URL:", req.originalUrl);
+    console.log("Body keys:", Object.keys(req.body || {}));
+    console.log("Has refreshToken:", !!req.body?.refreshToken);
+
     const { refreshToken } = req.body;
+
     if (!refreshToken) {
+      console.error("❌ Refresh token missing from request body");
       sendError(res, "Refresh token required", 400);
       return;
     }
+
+    console.log("Refresh token length:", refreshToken.length);
+    console.log(
+      "Refresh token preview:",
+      `${refreshToken.substring(0, 10)}...`
+    );
+
+    console.log("Calling authService.refreshAccessToken()...");
+
     const tokens = await authService.refreshAccessToken(refreshToken);
+
+    console.log("✅ Token refresh successful");
+    console.log("Returned token keys:", Object.keys(tokens || {}));
+
     sendSuccess(res, tokens, "Token refreshed");
   } catch (error) {
+    console.error("❌ Refresh token controller error:", error);
     next(error);
   }
 }

@@ -65,9 +65,7 @@ export async function getGmailClient(userId: number) {
   const refreshToken = decrypt(account.refresh_token_encrypted);
 
   const client = getGmailOAuthClient();
-  client.setCredentials({
-    refresh_token: refreshToken,
-  });
+  client.setCredentials({ refresh_token: refreshToken });
 
   const { credentials } = await client.refreshAccessToken();
   client.setCredentials(credentials);
@@ -89,23 +87,27 @@ export async function getGmailClient(userId: number) {
   return { client, account };
 }
 
-// ✅ toName now accepts string | null | undefined
+/**
+ * Send email via Gmail.
+ *
+ * ✅ To: header is ALWAYS just the raw email address.
+ *    The recruiter name field is ONLY for the email body salutation.
+ *    We do NOT put any display name in the To: header.
+ *    This matches standard cold email tools (Hunter.io, Lemlist etc).
+ */
 export async function sendEmailViaGmail(
   userId: number,
-  to: string,
-  toName: string | null | undefined,
+  to: string,           // raw email only — never contains display name
   subject: string,
   body: string,
   attachmentPaths: string[] = []
 ): Promise<string> {
   const { client, account } = await getGmailClient(userId);
-
   const gmail = google.gmail({ version: "v1", auth: client });
 
   const mimeMessage = await buildMimeMessage(
     account.gmail_address,
     to,
-    toName,
     subject,
     body,
     attachmentPaths
@@ -119,39 +121,15 @@ export async function sendEmailViaGmail(
 
   const response = await gmail.users.messages.send({
     userId: "me",
-    requestBody: {
-      raw: encodedMessage,
-    },
+    requestBody: { raw: encodedMessage },
   });
 
   return response.data.id || "";
 }
 
-/**
- * Builds the "To:" header exactly like Gmail manual send (RFC 2822).
- *
- * With name:    John Smith <john@company.com>
- * Special char: "Smith, John" <john@company.com>
- * Without name: john@company.com
- */
-function formatToHeader(toName: string | null | undefined, to: string): string {
-  const cleanEmail = to.trim().toLowerCase();
-  const cleanName = toName?.trim();
-
-  if (!cleanName) {
-    return cleanEmail;
-  }
-
-  const needsQuoting = /[,;"\\<>@()]/.test(cleanName);
-  const formattedName = needsQuoting ? `"${cleanName}"` : cleanName;
-
-  return `${formattedName} <${cleanEmail}>`;
-}
-
 async function buildMimeMessage(
   from: string,
-  to: string,
-  toName: string | null | undefined,
+  to: string,          // raw email — no display name
   subject: string,
   body: string,
   attachmentPaths: string[]
@@ -162,7 +140,7 @@ async function buildMimeMessage(
 
   const lines: string[] = [
     `From: ${from}`,
-    `To: ${formatToHeader(toName, to)}`, // ✅ uses proper RFC 2822 formatting
+    `To: ${to.trim().toLowerCase()}`,   // ✅ ALWAYS just raw email
     `Subject: ${subject}`,
     `MIME-Version: 1.0`,
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
@@ -193,7 +171,6 @@ async function buildMimeMessage(
   }
 
   lines.push(`--${boundary}--`);
-
   return lines.join("\r\n");
 }
 
