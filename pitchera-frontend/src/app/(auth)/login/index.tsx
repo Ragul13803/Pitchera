@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
 
     color: "#94A3B8",
 
-    fontSize: 11,
+    fontSize: 13,
     lineHeight: 17,
 
     textAlign: "center",
@@ -319,6 +319,7 @@ const styles = StyleSheet.create({
   termsLink: {
     color: "#64748B",
     fontWeight: "600",
+    fontSize: 13,
   },
 
   /* Footer */

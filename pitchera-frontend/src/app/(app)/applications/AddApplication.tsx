@@ -571,7 +571,7 @@ useEffect(() => {
     <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
     <Text style={styles.gmailBannerConnectedText}>
       Sending from{" "}
-      <Text style={{ fontWeight: "700" }}>{gmailStatus.gmailAddress}</Text>
+      <Text style={{ fontWeight: "700", fontSize: 13 }}>{gmailStatus.gmailAddress}</Text>
     </Text>
     <TouchableOpacity
       onPress={() => router.push("/(app)/connect-gmail")}
