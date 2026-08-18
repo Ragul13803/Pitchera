@@ -14,15 +14,18 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import {
+  useForm,
+  Controller,
+  useFieldArray,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Ionicons } from "@expo/vector-icons";
+
 import { useTheme } from "@/context/ThemeContext";
 import { api } from "@/services/api";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import DateField from "@/components/ui/DateField";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Default template
@@ -69,12 +72,17 @@ const TEMPLATE_VARS = [
 
 const recruiterSchema = z.object({
   name: z.string().trim().optional(),
+
   email: z
     .string()
     .trim()
     .min(1, "Email is required")
     .email("Please enter a valid email"),
-  position: z.string().trim().min(1, "Position is required"),
+
+  position: z
+    .string()
+    .trim()
+    .min(1, "Position is required"),
 });
 
 const formSchema = z.object({
@@ -83,13 +91,22 @@ const formSchema = z.object({
     .min(1, "Add at least one recruiter")
     .refine(
       (recruiters) => {
-        const emails = recruiters.map((r) => r.email.toLowerCase().trim());
+        const emails = recruiters.map((r) =>
+          r.email.toLowerCase().trim()
+        );
+
         return emails.length === new Set(emails).size;
       },
-      { message: "Duplicate recruiter emails are not allowed" }
+      {
+        message:
+          "Duplicate recruiter emails are not allowed",
+      }
     ),
+
   useDefaultTemplate: z.boolean(),
+
   customSubject: z.string().optional(),
+
   customBody: z.string().optional(),
 });
 
@@ -109,9 +126,22 @@ function FieldLabel({
   colors: any;
 }) {
   return (
-    <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+    <Text
+      style={[
+        styles.fieldLabel,
+        {
+          color: colors.textSecondary,
+        },
+      ]}
+    >
       {label}
-      {required && <Text style={{ color: "#EF4444" }}> *</Text>}
+
+      {required && (
+        <Text style={{ color: "#EF4444" }}>
+          {" "}
+          *
+        </Text>
+      )}
     </Text>
   );
 }
@@ -123,61 +153,23 @@ function FieldError({
   message?: string;
   visible: boolean;
 }) {
-  if (!visible || !message) return null;
-
-  return (
-    <View style={styles.errorRow}>
-      <Ionicons name="alert-circle-outline" size={12} color="#EF4444" />
-      <Text style={styles.fieldError}>{message}</Text>
-    </View>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Web date helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function pad2(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function toWebDateValue(date: Date) {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(
-    date.getDate()
-  )}`;
-}
-
-function toWebTimeValue(date: Date) {
-  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
-}
-
-function combineWebDateTime(dateValue: string, timeValue: string): Date | null {
-  if (!dateValue || !timeValue) return null;
-
-  const [year, month, day] = dateValue.split("-").map(Number);
-  const [hours, minutes] = timeValue.split(":").map(Number);
-
-  if (
-    !year ||
-    !month ||
-    !day ||
-    Number.isNaN(hours) ||
-    Number.isNaN(minutes)
-  ) {
+  if (!visible || !message) {
     return null;
   }
 
-  const date = new Date(
-    year,
-    month - 1,
-    day,
-    hours,
-    minutes,
-    0,
-    0
-  );
+  return (
+    <View style={styles.errorRow}>
+      <Ionicons
+        name="alert-circle-outline"
+        size={12}
+        color="#EF4444"
+      />
 
-  return Number.isNaN(date.getTime()) ? null : date;
+      <Text style={styles.fieldError}>
+        {message}
+      </Text>
+    </View>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -186,50 +178,54 @@ function combineWebDateTime(dateValue: string, timeValue: string): Date | null {
 
 export default function AddJobScreen() {
   const router = useRouter();
+
   const { colors } = useTheme();
+
   const { width } = useWindowDimensions();
 
   const isDesktop = width >= 700;
-  const isWeb = Platform.OS === "web";
 
-  const [submitting, setSubmitting] = useState(false);
-  const [submitMode, setSubmitMode] = useState<"now" | "schedule" | null>(
-    null
-  );
+  const [submitting, setSubmitting] =
+    useState(false);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Native date/time picker state
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const [scheduledDate, setScheduledDate] = useState<Date | null>(null);
-
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-
-  const [pickerTempDate, setPickerTempDate] = useState<Date>(
-    new Date(Date.now() + 60 * 60 * 1000)
-  );
+  const [submitMode, setSubmitMode] = useState<
+    "now" | "schedule" | null
+  >(null);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Web date/time state
+  // Schedule
   // ─────────────────────────────────────────────────────────────────────────
 
-  const [webDate, setWebDate] = useState("");
-  const [webTime, setWebTime] = useState("");
+  /*
+   * IMPORTANT:
+   *
+   * This uses your other project's DateField.
+   *
+   * DateField returns an ISO string:
+   *
+   * 2026-08-20T14:30:00.000Z
+   *
+   * No browser input.
+   * No native DateTimePicker in this screen.
+   * No webDate/webTime state.
+   */
+  const [scheduledFor, setScheduledFor] =
+    useState("");
 
   // ─────────────────────────────────────────────────────────────────────────
   // Gmail status
   // ─────────────────────────────────────────────────────────────────────────
 
-  const [gmailStatus, setGmailStatus] = useState<{
-    checked: boolean;
-    connected: boolean;
-    gmailAddress: string | null;
-  }>({
-    checked: false,
-    connected: false,
-    gmailAddress: null,
-  });
+  const [gmailStatus, setGmailStatus] =
+    useState<{
+      checked: boolean;
+      connected: boolean;
+      gmailAddress: string | null;
+    }>({
+      checked: false,
+      connected: false,
+      gmailAddress: null,
+    });
 
   useEffect(() => {
     api
@@ -240,7 +236,8 @@ export default function AddJobScreen() {
         setGmailStatus({
           checked: true,
           connected: data?.connected === true,
-          gmailAddress: data?.gmailAddress ?? null,
+          gmailAddress:
+            data?.gmailAddress ?? null,
         });
       })
       .catch(() => {
@@ -262,37 +259,43 @@ export default function AddJobScreen() {
     watch,
     setValue,
     getValues,
-    formState: { errors, isSubmitted },
+    formState: {
+      errors,
+      isSubmitted,
+    },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+
     defaultValues: {
-      recruiters: [{ name: "", email: "", position: "" }],
+      recruiters: [
+        {
+          name: "",
+          email: "",
+          position: "",
+        },
+      ],
+
       useDefaultTemplate: true,
+
       customSubject: "",
+
       customBody: "",
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "recruiters",
-  });
+  const { fields, append, remove } =
+    useFieldArray({
+      control,
+      name: "recruiters",
+    });
 
-  const useDefault = watch("useDefaultTemplate");
+  const useDefault = watch(
+    "useDefaultTemplate"
+  );
 
   // ─────────────────────────────────────────────────────────────────────────
   // Helpers
   // ─────────────────────────────────────────────────────────────────────────
-
-  function formatScheduledDisplay(date: Date): string {
-    return date.toLocaleString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
 
   function parseError(err: any): string {
     const raw: string =
@@ -302,203 +305,110 @@ export default function AddJobScreen() {
 
     const lower = raw.toLowerCase();
 
-    if (lower.includes("gmail") && lower.includes("not connected")) {
-      return "Your Gmail account is not connected.\n\nGo to Settings → Connect Gmail.";
+    if (
+      lower.includes("gmail") &&
+      lower.includes("not connected")
+    ) {
+      return (
+        "Your Gmail account is not connected.\n\n" +
+        "Go to Settings → Connect Gmail."
+      );
     }
 
-    if (lower.includes("token") || lower.includes("auth")) {
-      return "Your Gmail authorisation has expired.\n\nPlease reconnect Gmail in Settings.";
+    if (
+      lower.includes("token") ||
+      lower.includes("auth")
+    ) {
+      return (
+        "Your Gmail authorisation has expired.\n\n" +
+        "Please reconnect Gmail in Settings."
+      );
     }
 
-    if (lower.includes("quota") || lower.includes("rate limit")) {
-      return "Gmail sending limit reached. Please wait and try again.";
+    if (
+      lower.includes("quota") ||
+      lower.includes("rate limit")
+    ) {
+      return (
+        "Gmail sending limit reached. " +
+        "Please wait and try again."
+      );
     }
 
-    if (lower.includes("network") || lower.includes("fetch")) {
-      return "Network error. Check your internet connection.";
+    if (
+      lower.includes("network") ||
+      lower.includes("fetch")
+    ) {
+      return (
+        "Network error. Check your internet connection."
+      );
     }
 
     return raw;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Schedule helpers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  function getInitialScheduleDate() {
-    if (scheduledDate) {
-      return new Date(scheduledDate);
+  function formatScheduledDisplay(
+    isoDate: string
+  ) {
+    if (!isoDate) {
+      return "";
     }
 
-    const date = new Date(Date.now() + 60 * 60 * 1000);
+    const date = new Date(isoDate);
 
-    // Round to next 5 minutes
-    const minutes = date.getMinutes();
-    date.setMinutes(Math.ceil(minutes / 5) * 5, 0, 0);
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
 
-    return date;
+    return date.toLocaleString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
-  function validateAndSetSchedule(date: Date) {
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-      Alert.alert("Invalid Time", "Please select a valid date and time.");
+  function clearSchedule() {
+    setScheduledFor("");
+  }
+
+  function validateSchedule(
+    isoDate: string
+  ): boolean {
+    if (!isoDate) {
+      Alert.alert(
+        "No Schedule Set",
+        "Please pick a date and time to schedule the email."
+      );
+
       return false;
     }
 
-    if (date.getTime() <= Date.now() + 60_000) {
+    const date = new Date(isoDate);
+
+    if (Number.isNaN(date.getTime())) {
+      Alert.alert(
+        "Invalid Time",
+        "Please select a valid date and time."
+      );
+
+      return false;
+    }
+
+    if (
+      date.getTime() <=
+      Date.now() + 60 * 1000
+    ) {
       Alert.alert(
         "Invalid Time",
         "Please select a time at least 1 minute in the future."
       );
+
       return false;
     }
 
-    setScheduledDate(date);
     return true;
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Native picker
-  // ─────────────────────────────────────────────────────────────────────────
-
-  function openDatePicker() {
-    const initial = getInitialScheduleDate();
-
-    if (isWeb) {
-      setWebDate(toWebDateValue(initial));
-      setWebTime(toWebTimeValue(initial));
-      return;
-    }
-
-    setPickerTempDate(initial);
-    setShowDatePicker(true);
-    setShowTimePicker(false);
-  }
-
-  function onDateChange(
-    event: DateTimePickerEvent,
-    selected?: Date
-  ) {
-    if (Platform.OS === "android") {
-      setShowDatePicker(false);
-
-      if (event.type === "dismissed" || !selected) {
-        return;
-      }
-
-      const next = new Date(pickerTempDate);
-
-      next.setFullYear(
-        selected.getFullYear(),
-        selected.getMonth(),
-        selected.getDate()
-      );
-
-      setPickerTempDate(next);
-      setShowTimePicker(true);
-
-      return;
-    }
-
-    if (selected) {
-      setPickerTempDate(selected);
-    }
-  }
-
-  function onTimeChange(
-    event: DateTimePickerEvent,
-    selected?: Date
-  ) {
-    if (Platform.OS === "android") {
-      setShowTimePicker(false);
-
-      if (event.type === "dismissed" || !selected) {
-        return;
-      }
-
-      const next = new Date(pickerTempDate);
-
-      next.setHours(
-        selected.getHours(),
-        selected.getMinutes(),
-        0,
-        0
-      );
-
-      setPickerTempDate(next);
-      validateAndSetSchedule(next);
-
-      return;
-    }
-
-    if (selected) {
-      setPickerTempDate(selected);
-    }
-  }
-
-  function confirmIOSPicker() {
-    const valid = validateAndSetSchedule(pickerTempDate);
-
-    if (valid) {
-      setShowDatePicker(false);
-      setShowTimePicker(false);
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Web picker handlers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  function handleWebDateChange(value: string) {
-    setWebDate(value);
-
-    if (!value) {
-      setScheduledDate(null);
-      return;
-    }
-
-    const currentTime = webTime || toWebTimeValue(getInitialScheduleDate());
-
-    const combined = combineWebDateTime(value, currentTime);
-
-    if (combined) {
-      setPickerTempDate(combined);
-    }
-
-    // Only set scheduled date after both values exist
-    if (webTime) {
-      if (combined) {
-        validateAndSetSchedule(combined);
-      }
-    }
-  }
-
-  function handleWebTimeChange(value: string) {
-    setWebTime(value);
-
-    if (!value) {
-      setScheduledDate(null);
-      return;
-    }
-
-    const currentDate = webDate || toWebDateValue(getInitialScheduleDate());
-
-    const combined = combineWebDateTime(currentDate, value);
-
-    if (!combined) {
-      return;
-    }
-
-    setPickerTempDate(combined);
-    validateAndSetSchedule(combined);
-  }
-
-  function clearSchedule() {
-    setScheduledDate(null);
-    setWebDate("");
-    setWebTime("");
-    setShowDatePicker(false);
-    setShowTimePicker(false);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -509,30 +419,36 @@ export default function AddJobScreen() {
     data: FormValues,
     mode: "now" | "schedule"
   ) => {
-    if (submitting) return;
-
-    if (mode === "schedule" && !scheduledDate) {
-      Alert.alert(
-        "No Schedule Set",
-        "Please pick a date and time to schedule the email.",
-        [
-          {
-            text: "Pick Date & Time",
-            onPress: openDatePicker,
-          },
-        ]
-      );
-
+    if (submitting) {
       return;
     }
 
-    const emailSubject = data.useDefaultTemplate
-      ? DEFAULT_SUBJECT
-      : data.customSubject?.trim() || DEFAULT_SUBJECT;
+    // Schedule validation
+    if (mode === "schedule") {
+      if (!scheduledFor) {
+        Alert.alert(
+          "No Schedule Set",
+          "Please pick a date and time to schedule the email."
+        );
 
-    const emailBody = data.useDefaultTemplate
-      ? DEFAULT_BODY
-      : data.customBody?.trim() || "";
+        return;
+      }
+
+      if (!validateSchedule(scheduledFor)) {
+        return;
+      }
+    }
+
+    const emailSubject =
+      data.useDefaultTemplate
+        ? DEFAULT_SUBJECT
+        : data.customSubject?.trim() ||
+          DEFAULT_SUBJECT;
+
+    const emailBody =
+      data.useDefaultTemplate
+        ? DEFAULT_BODY
+        : data.customBody?.trim() || "";
 
     if (!emailBody) {
       Alert.alert(
@@ -544,24 +460,45 @@ export default function AddJobScreen() {
     }
 
     const payload: Record<string, any> = {
-      recruiters: data.recruiters.map((r) => ({
-        name: r.name?.trim() || null,
-        email: r.email.trim().toLowerCase(),
-        position: r.position.trim(),
-      })),
+      recruiters: data.recruiters.map(
+        (r) => ({
+          name:
+            r.name?.trim() || null,
+
+          email:
+            r.email.trim().toLowerCase(),
+
+          position:
+            r.position.trim(),
+        })
+      ),
+
       emailBody,
+
       emailSubject,
-      useDefaultTemplate: data.useDefaultTemplate,
+
+      useDefaultTemplate:
+        data.useDefaultTemplate,
     };
 
-    if (mode === "schedule" && scheduledDate) {
-      payload.scheduledFor = scheduledDate.toISOString();
+    if (
+      mode === "schedule" &&
+      scheduledFor
+    ) {
+      const scheduleDate =
+        new Date(scheduledFor);
+
+      payload.scheduledFor =
+        scheduleDate.toISOString();
+
       payload.timezone =
-        Intl.DateTimeFormat().resolvedOptions().timeZone;
+        Intl.DateTimeFormat().resolvedOptions()
+          .timeZone;
     }
 
     try {
       setSubmitting(true);
+
       setSubmitMode(mode);
 
       const endpoint =
@@ -569,30 +506,55 @@ export default function AddJobScreen() {
           ? "/applications/schedule"
           : "/applications/send";
 
-      const response: any = await api.post(endpoint, payload);
+      const response: any =
+        await api.post(
+          endpoint,
+          payload
+        );
 
-      const resData = response?.data ?? response ?? {};
-      const count = data.recruiters.length;
+      const resData =
+        response?.data ??
+        response ??
+        {};
+
+      const count =
+        data.recruiters.length;
+
+      // ─────────────────────────────────────────────────────────────────────
+      // SEND NOW
+      // ─────────────────────────────────────────────────────────────────────
 
       if (mode === "now") {
-        const sent: number = resData?.sent ?? count;
-        const failed: number = resData?.failed ?? 0;
-        const errorDetails: string[] = resData?.errors ?? [];
+        const sent: number =
+          resData?.sent ?? count;
+
+        const failed: number =
+          resData?.failed ?? 0;
+
+        const errorDetails: string[] =
+          resData?.errors ?? [];
 
         if (failed === 0) {
           Alert.alert(
             "🎉 Email Sent!",
+
             sent === 1
               ? "Your cold email was sent successfully via Gmail."
               : `${sent} cold emails sent successfully via Gmail.`,
+
             [
               {
                 text: "View Applied Jobs",
+
                 onPress: () =>
-                  router.push("/(app)/applications"),
+                  router.push(
+                    "/(app)/applications"
+                  ),
               },
+
               {
                 text: "Send Another",
+
                 style: "cancel",
               },
             ]
@@ -600,87 +562,136 @@ export default function AddJobScreen() {
         } else if (sent === 0) {
           Alert.alert(
             "❌ Send Failed",
-            `Failed to send.\n\n${errorDetails.join("\n")}`,
-            [{ text: "OK" }]
+
+            `Failed to send.\n\n${errorDetails.join(
+              "\n"
+            )}`,
+
+            [
+              {
+                text: "OK",
+              },
+            ]
           );
         } else {
           Alert.alert(
             "⚠️ Partially Sent",
+
             `${sent} sent, ${failed} failed.\n\nFailed:\n${errorDetails.join(
               "\n"
             )}`,
+
             [
               {
                 text: "View Applied Jobs",
+
                 onPress: () =>
-                  router.push("/(app)/applications"),
+                  router.push(
+                    "/(app)/applications"
+                  ),
               },
+
               {
                 text: "OK",
+
                 style: "cancel",
               },
             ]
           );
         }
-      } else {
-        const scheduled: number = resData?.scheduled ?? count;
 
-        Alert.alert(
-          "📅 Email Scheduled!",
-          `${scheduled} email${
-            scheduled > 1 ? "s" : ""
-          } scheduled for ${formatScheduledDisplay(
-            scheduledDate!
-          )}.\n\nWill be sent from your Gmail automatically.`,
-          [
-            {
-              text: "View Applied Jobs",
-              onPress: () =>
-                router.push("/(app)/applications"),
-            },
-            {
-              text: "OK",
-              style: "cancel",
-            },
-          ]
-        );
-
-        clearSchedule();
+        return;
       }
-    } catch (err: any) {
-      const message = parseError(err);
-      const isGmail = message.toLowerCase().includes("gmail");
+
+      // ─────────────────────────────────────────────────────────────────────
+      // SCHEDULE
+      // ─────────────────────────────────────────────────────────────────────
+
+      const scheduled: number =
+        resData?.scheduled ?? count;
 
       Alert.alert(
-        isGmail ? "Gmail Not Connected" : "Error",
+        "📅 Email Scheduled!",
+
+        `${scheduled} email${
+          scheduled > 1 ? "s" : ""
+        } scheduled for ${formatScheduledDisplay(
+          scheduledFor
+        )}.\n\nWill be sent from your Gmail automatically.`,
+
+        [
+          {
+            text: "View Applied Jobs",
+
+            onPress: () =>
+              router.push(
+                "/(app)/applications"
+              ),
+          },
+
+          {
+            text: "OK",
+
+            style: "cancel",
+          },
+        ]
+      );
+
+      clearSchedule();
+    } catch (err: any) {
+      const message = parseError(err);
+
+      const isGmail =
+        message
+          .toLowerCase()
+          .includes("gmail");
+
+      Alert.alert(
+        isGmail
+          ? "Gmail Not Connected"
+          : "Error",
+
         message,
+
         isGmail
           ? [
               {
                 text: "Cancel",
+
                 style: "cancel",
               },
+
               {
                 text: "Go to Settings",
+
                 onPress: () =>
-                  router.push("/(app)/connect-gmail"),
+                  router.push(
+                    "/(app)/connect-gmail"
+                  ),
               },
             ]
-          : [{ text: "OK" }]
+          : [
+              {
+                text: "OK",
+              },
+            ]
       );
     } finally {
       setSubmitting(false);
+
       setSubmitMode(null);
     }
   };
 
-  const onSendNow = handleSubmit((data) =>
-    onSubmit(data, "now")
-  );
+  const onSendNow =
+    handleSubmit((data) =>
+      onSubmit(data, "now")
+    );
 
-  const onSchedule = handleSubmit((data) =>
-    onSubmit(data, "schedule")
-  );
+  const onSchedule =
+    handleSubmit((data) =>
+      onSubmit(data, "schedule")
+    );
 
   // ─────────────────────────────────────────────────────────────────────────
   // Render
@@ -690,10 +701,15 @@ export default function AddJobScreen() {
     <KeyboardAvoidingView
       style={[
         styles.container,
-        { backgroundColor: colors.background },
+        {
+          backgroundColor:
+            colors.background,
+        },
       ]}
       behavior={
-        Platform.OS === "ios" ? "padding" : undefined
+        Platform.OS === "ios"
+          ? "padding"
+          : undefined
       }
     >
       <ScrollView
@@ -701,7 +717,9 @@ export default function AddJobScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content,
-          isDesktop && styles.desktopContent,
+
+          isDesktop &&
+            styles.desktopContent,
         ]}
       >
         {/* ──────────────────────────────────────────────────────────────── */}
@@ -712,13 +730,21 @@ export default function AddJobScreen() {
           !gmailStatus.connected && (
             <TouchableOpacity
               onPress={() =>
-                router.push("/(app)/connect-gmail")
+                router.push(
+                  "/(app)/connect-gmail"
+                )
               }
               style={styles.gmailBanner}
               activeOpacity={0.85}
             >
-              <View style={styles.gmailBannerLeft}>
-                <View style={styles.gmailBannerIconBox}>
+              <View
+                style={styles.gmailBannerLeft}
+              >
+                <View
+                  style={
+                    styles.gmailBannerIconBox
+                  }
+                >
                   <Ionicons
                     name="mail-unread-outline"
                     size={20}
@@ -726,14 +752,25 @@ export default function AddJobScreen() {
                   />
                 </View>
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.gmailBannerTitle}>
+                <View
+                  style={{ flex: 1 }}
+                >
+                  <Text
+                    style={
+                      styles.gmailBannerTitle
+                    }
+                  >
                     Gmail Not Connected
                   </Text>
 
-                  <Text style={styles.gmailBannerDesc}>
-                    Tap to connect Gmail — emails are sent
-                    from your real account.
+                  <Text
+                    style={
+                      styles.gmailBannerDesc
+                    }
+                  >
+                    Tap to connect Gmail —
+                    emails are sent from your
+                    real account.
                   </Text>
                 </View>
               </View>
@@ -752,8 +789,11 @@ export default function AddJobScreen() {
               style={[
                 styles.gmailBannerConnected,
                 {
-                  borderColor: "#BBF7D0",
-                  backgroundColor: "#F0FDF4",
+                  borderColor:
+                    "#BBF7D0",
+
+                  backgroundColor:
+                    "#F0FDF4",
                 },
               ]}
             >
@@ -764,17 +804,27 @@ export default function AddJobScreen() {
               />
 
               <Text
-                style={styles.gmailBannerConnectedText}
+                style={
+                  styles.gmailBannerConnectedText
+                }
               >
                 Sending from{" "}
-                <Text style={{ fontWeight: "700" }}>
-                  {gmailStatus.gmailAddress}
+                <Text
+                  style={{
+                    fontWeight: "700",
+                  }}
+                >
+                  {
+                    gmailStatus.gmailAddress
+                  }
                 </Text>
               </Text>
 
               <TouchableOpacity
                 onPress={() =>
-                  router.push("/(app)/connect-gmail")
+                  router.push(
+                    "/(app)/connect-gmail"
+                  )
                 }
                 hitSlop={{
                   top: 8,
@@ -796,11 +846,15 @@ export default function AddJobScreen() {
         {/* Recruiters */}
         {/* ──────────────────────────────────────────────────────────────── */}
 
-        <View style={styles.sectionHeader}>
+        <View
+          style={styles.sectionHeader}
+        >
           <Text
             style={[
               styles.sectionTitle,
-              { color: colors.text },
+              {
+                color: colors.text,
+              },
             ]}
           >
             Recruiters
@@ -809,24 +863,38 @@ export default function AddJobScreen() {
           <Text
             style={[
               styles.sectionSubtitle,
-              { color: colors.textSecondary },
+              {
+                color:
+                  colors.textSecondary,
+              },
             ]}
           >
-            Add recruiters you want to contact
+            Add recruiters you want to
+            contact
           </Text>
         </View>
 
         {isSubmitted &&
-          errors.recruiters?.root?.message && (
-            <View style={styles.rootError}>
+          errors.recruiters?.root
+            ?.message && (
+            <View
+              style={styles.rootError}
+            >
               <Ionicons
                 name="alert-circle-outline"
                 size={15}
                 color="#DC2626"
               />
 
-              <Text style={styles.rootErrorText}>
-                {errors.recruiters.root.message}
+              <Text
+                style={
+                  styles.rootErrorText
+                }
+              >
+                {
+                  errors.recruiters
+                    .root.message
+                }
               </Text>
             </View>
           )}
@@ -841,7 +909,10 @@ export default function AddJobScreen() {
             <Text
               style={[
                 styles.columnHeaderText,
-                { color: colors.textSecondary },
+                {
+                  color:
+                    colors.textSecondary,
+                },
               ]}
             >
               NAME (optional)
@@ -850,7 +921,10 @@ export default function AddJobScreen() {
             <Text
               style={[
                 styles.columnHeaderText,
-                { color: colors.textSecondary },
+                {
+                  color:
+                    colors.textSecondary,
+                },
               ]}
             >
               EMAIL *
@@ -859,381 +933,511 @@ export default function AddJobScreen() {
             <Text
               style={[
                 styles.columnHeaderText,
-                { color: colors.textSecondary },
+                {
+                  color:
+                    colors.textSecondary,
+                },
               ]}
             >
               POSITION *
             </Text>
 
-            <View style={{ width: 40 }} />
+            <View
+              style={{ width: 40 }}
+            />
           </View>
         )}
 
-        {fields.map((field, index) => (
-          <View
-            key={field.id}
-            style={[
-              styles.recruiterCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            {!isDesktop && (
-              <View style={styles.mobileCardHeader}>
+        {fields.map(
+          (field, index) => (
+            <View
+              key={field.id}
+              style={[
+                styles.recruiterCard,
+
+                {
+                  backgroundColor:
+                    colors.card,
+
+                  borderColor:
+                    colors.border,
+                },
+              ]}
+            >
+              {!isDesktop && (
                 <View
-                  style={[
-                    styles.numberBadge,
-                    {
-                      backgroundColor:
-                        colors.primary + "18",
-                    },
-                  ]}
+                  style={
+                    styles.mobileCardHeader
+                  }
                 >
-                  <Text
+                  <View
                     style={[
-                      styles.numberBadgeText,
-                      { color: colors.primary },
+                      styles.numberBadge,
+
+                      {
+                        backgroundColor:
+                          colors.primary +
+                          "18",
+                      },
                     ]}
                   >
+                    <Text
+                      style={[
+                        styles.numberBadgeText,
+                        {
+                          color:
+                            colors.primary,
+                        },
+                      ]}
+                    >
+                      {index + 1}
+                    </Text>
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.recruiterTitle,
+                      {
+                        color:
+                          colors.text,
+                      },
+                    ]}
+                  >
+                    Recruiter{" "}
                     {index + 1}
                   </Text>
+
+                  {fields.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        remove(index)
+                      }
+                      style={
+                        styles.deleteButton
+                      }
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#EF4444"
+                      />
+                    </TouchableOpacity>
+                  )}
                 </View>
+              )}
 
-                <Text
-                  style={[
-                    styles.recruiterTitle,
-                    { color: colors.text },
-                  ]}
-                >
-                  Recruiter {index + 1}
-                </Text>
-
-                {fields.length > 1 && (
-                  <TouchableOpacity
-                    onPress={() => remove(index)}
-                    style={styles.deleteButton}
-                  >
-                    <Ionicons
-                      name="trash-outline"
-                      size={18}
-                      color="#EF4444"
-                    />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {isDesktop ? (
-              <View style={styles.desktopRow}>
+              {isDesktop ? (
                 <View
-                  style={[
-                    styles.desktopField,
-                    { flex: 1 },
-                  ]}
+                  style={styles.desktopRow}
                 >
-                  <Controller
-                    control={control}
-                    name={`recruiters.${index}.name`}
-                    render={({
-                      field: { onChange, value },
-                    }) => (
-                      <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        placeholder="John Smith (optional)"
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        style={[
-                          styles.input,
-                          {
-                            backgroundColor:
-                              colors.background,
-                            borderColor:
-                              colors.border,
-                            color: colors.text,
-                          },
-                        ]}
-                      />
-                    )}
-                  />
-                </View>
-
-                <View
-                  style={[
-                    styles.desktopField,
-                    { flex: 1.3 },
-                  ]}
-                >
-                  <Controller
-                    control={control}
-                    name={`recruiters.${index}.email`}
-                    render={({
-                      field: { onChange, value },
-                    }) => (
-                      <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        placeholder="john@company.com"
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        style={[
-                          styles.input,
-                          {
-                            backgroundColor:
-                              colors.background,
-                            borderColor:
-                              errors.recruiters?.[index]
-                                ?.email
-                                ? "#EF4444"
-                                : colors.border,
-                            color: colors.text,
-                          },
-                        ]}
-                      />
-                    )}
-                  />
-
-                  <FieldError
-                    message={
-                      errors.recruiters?.[index]?.email
-                        ?.message
-                    }
-                    visible={isSubmitted}
-                  />
-                </View>
-
-                <View
-                  style={[
-                    styles.desktopField,
-                    { flex: 1 },
-                  ]}
-                >
-                  <Controller
-                    control={control}
-                    name={`recruiters.${index}.position`}
-                    render={({
-                      field: { onChange, value },
-                    }) => (
-                      <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        placeholder="Software Engineer"
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        style={[
-                          styles.input,
-                          {
-                            backgroundColor:
-                              colors.background,
-                            borderColor:
-                              errors.recruiters?.[index]
-                                ?.position
-                                ? "#EF4444"
-                                : colors.border,
-                            color: colors.text,
-                          },
-                        ]}
-                      />
-                    )}
-                  />
-
-                  <FieldError
-                    message={
-                      errors.recruiters?.[index]?.position
-                        ?.message
-                    }
-                    visible={isSubmitted}
-                  />
-                </View>
-
-                {fields.length > 1 ? (
-                  <TouchableOpacity
-                    onPress={() => remove(index)}
-                    style={styles.desktopDelete}
-                  >
-                    <Ionicons
-                      name="trash-outline"
-                      size={18}
-                      color="#EF4444"
-                    />
-                  </TouchableOpacity>
-                ) : (
-                  <View style={{ width: 40 }} />
-                )}
-              </View>
-            ) : (
-              <>
-                <View style={styles.mobileField}>
-                  <FieldLabel
-                    label="Name (for salutation only)"
-                    colors={colors}
-                  />
-
-                  <Controller
-                    control={control}
-                    name={`recruiters.${index}.name`}
-                    render={({
-                      field: { onChange, value },
-                    }) => (
-                      <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        placeholder='e.g. "Sarah" → Dear Sarah,'
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        style={[
-                          styles.input,
-                          {
-                            backgroundColor:
-                              colors.background,
-                            borderColor:
-                              colors.border,
-                            color: colors.text,
-                          },
-                        ]}
-                      />
-                    )}
-                  />
-
-                  <Text
+                  {/* Name */}
+                  <View
                     style={[
-                      styles.fieldHint,
-                      { color: colors.textSecondary },
+                      styles.desktopField,
+                      {
+                        flex: 1,
+                      },
                     ]}
                   >
-                    Optional — if empty, salutation is
-                    chosen from email address
-                  </Text>
-                </View>
+                    <Controller
+                      control={control}
+                      name={`recruiters.${index}.name`}
+                      render={({
+                        field: {
+                          onChange,
+                          value,
+                        },
+                      }) => (
+                        <TextInput
+                          value={value}
+                          onChangeText={
+                            onChange
+                          }
+                          placeholder="John Smith (optional)"
+                          placeholderTextColor={
+                            colors.textSecondary
+                          }
+                          style={[
+                            styles.input,
+                            {
+                              backgroundColor:
+                                colors.background,
+                              borderColor:
+                                colors.border,
+                              color:
+                                colors.text,
+                            },
+                          ]}
+                        />
+                      )}
+                    />
+                  </View>
 
-                <View style={styles.mobileField}>
-                  <FieldLabel
-                    label="Email"
-                    required
-                    colors={colors}
-                  />
-
-                  <Controller
-                    control={control}
-                    name={`recruiters.${index}.email`}
-                    render={({
-                      field: { onChange, value },
-                    }) => (
-                      <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        placeholder="john@company.com"
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        style={[
-                          styles.input,
-                          {
-                            backgroundColor:
-                              colors.background,
-                            borderColor:
-                              errors.recruiters?.[index]
-                                ?.email
-                                ? "#EF4444"
-                                : colors.border,
-                            color: colors.text,
-                          },
-                        ]}
-                      />
-                    )}
-                  />
-
-                  <FieldError
-                    message={
-                      errors.recruiters?.[index]?.email
-                        ?.message
-                    }
-                    visible={isSubmitted}
-                  />
-                </View>
-
-                <View style={styles.mobileField}>
-                  <FieldLabel
-                    label="Position"
-                    required
-                    colors={colors}
-                  />
-
-                  <Controller
-                    control={control}
-                    name={`recruiters.${index}.position`}
-                    render={({
-                      field: { onChange, value },
-                    }) => (
-                      <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        placeholder="Software Engineer"
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        style={[
-                          styles.input,
-                          {
-                            backgroundColor:
-                              colors.background,
-                            borderColor:
-                              errors.recruiters?.[index]
-                                ?.position
-                                ? "#EF4444"
-                                : colors.border,
-                            color: colors.text,
-                          },
-                        ]}
-                      />
-                    )}
-                  />
-
-                  <FieldError
-                    message={
-                      errors.recruiters?.[index]?.position
-                        ?.message
-                    }
-                    visible={isSubmitted}
-                  />
-                </View>
-
-                {fields.length > 1 && (
-                  <TouchableOpacity
-                    onPress={() => remove(index)}
+                  {/* Email */}
+                  <View
                     style={[
-                      styles.mobileRemoveButton,
-                      { borderColor: "#FCA5A5" },
+                      styles.desktopField,
+                      {
+                        flex: 1.3,
+                      },
                     ]}
                   >
-                    <Ionicons
-                      name="trash-outline"
-                      size={15}
-                      color="#EF4444"
+                    <Controller
+                      control={control}
+                      name={`recruiters.${index}.email`}
+                      render={({
+                        field: {
+                          onChange,
+                          value,
+                        },
+                      }) => (
+                        <TextInput
+                          value={value}
+                          onChangeText={
+                            onChange
+                          }
+                          placeholder="john@company.com"
+                          placeholderTextColor={
+                            colors.textSecondary
+                          }
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          style={[
+                            styles.input,
+                            {
+                              backgroundColor:
+                                colors.background,
+
+                              borderColor:
+                                errors
+                                  .recruiters?.[
+                                  index
+                                ]?.email
+                                  ? "#EF4444"
+                                  : colors.border,
+
+                              color:
+                                colors.text,
+                            },
+                          ]}
+                        />
+                      )}
+                    />
+
+                    <FieldError
+                      message={
+                        errors.recruiters?.[
+                          index
+                        ]?.email?.message
+                      }
+                      visible={isSubmitted}
+                    />
+                  </View>
+
+                  {/* Position */}
+                  <View
+                    style={[
+                      styles.desktopField,
+                      {
+                        flex: 1,
+                      },
+                    ]}
+                  >
+                    <Controller
+                      control={control}
+                      name={`recruiters.${index}.position`}
+                      render={({
+                        field: {
+                          onChange,
+                          value,
+                        },
+                      }) => (
+                        <TextInput
+                          value={value}
+                          onChangeText={
+                            onChange
+                          }
+                          placeholder="Software Engineer"
+                          placeholderTextColor={
+                            colors.textSecondary
+                          }
+                          style={[
+                            styles.input,
+                            {
+                              backgroundColor:
+                                colors.background,
+
+                              borderColor:
+                                errors
+                                  .recruiters?.[
+                                  index
+                                ]?.position
+                                  ? "#EF4444"
+                                  : colors.border,
+
+                              color:
+                                colors.text,
+                            },
+                          ]}
+                        />
+                      )}
+                    />
+
+                    <FieldError
+                      message={
+                        errors.recruiters?.[
+                          index
+                        ]?.position?.message
+                      }
+                      visible={isSubmitted}
+                    />
+                  </View>
+
+                  {fields.length > 1 ? (
+                    <TouchableOpacity
+                      onPress={() =>
+                        remove(index)
+                      }
+                      style={
+                        styles.desktopDelete
+                      }
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#EF4444"
+                      />
+                    </TouchableOpacity>
+                  ) : (
+                    <View
+                      style={{ width: 40 }}
+                    />
+                  )}
+                </View>
+              ) : (
+                <>
+                  {/* Mobile Name */}
+                  <View
+                    style={
+                      styles.mobileField
+                    }
+                  >
+                    <FieldLabel
+                      label="Name (for salutation only)"
+                      colors={colors}
+                    />
+
+                    <Controller
+                      control={control}
+                      name={`recruiters.${index}.name`}
+                      render={({
+                        field: {
+                          onChange,
+                          value,
+                        },
+                      }) => (
+                        <TextInput
+                          value={value}
+                          onChangeText={
+                            onChange
+                          }
+                          placeholder='e.g. "Sarah" → Dear Sarah,'
+                          placeholderTextColor={
+                            colors.textSecondary
+                          }
+                          style={[
+                            styles.input,
+                            {
+                              backgroundColor:
+                                colors.background,
+
+                              borderColor:
+                                colors.border,
+
+                              color:
+                                colors.text,
+                            },
+                          ]}
+                        />
+                      )}
                     />
 
                     <Text
-                      style={styles.mobileRemoveText}
+                      style={[
+                        styles.fieldHint,
+                        {
+                          color:
+                            colors.textSecondary,
+                        },
+                      ]}
                     >
-                      Remove Recruiter
+                      Optional — if empty,
+                      salutation is chosen
+                      from email address
                     </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-          </View>
-        ))}
+                  </View>
 
+                  {/* Mobile Email */}
+                  <View
+                    style={
+                      styles.mobileField
+                    }
+                  >
+                    <FieldLabel
+                      label="Email"
+                      required
+                      colors={colors}
+                    />
+
+                    <Controller
+                      control={control}
+                      name={`recruiters.${index}.email`}
+                      render={({
+                        field: {
+                          onChange,
+                          value,
+                        },
+                      }) => (
+                        <TextInput
+                          value={value}
+                          onChangeText={
+                            onChange
+                          }
+                          placeholder="john@company.com"
+                          placeholderTextColor={
+                            colors.textSecondary
+                          }
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          style={[
+                            styles.input,
+                            {
+                              backgroundColor:
+                                colors.background,
+
+                              borderColor:
+                                errors
+                                  .recruiters?.[
+                                  index
+                                ]?.email
+                                  ? "#EF4444"
+                                  : colors.border,
+
+                              color:
+                                colors.text,
+                            },
+                          ]}
+                        />
+                      )}
+                    />
+
+                    <FieldError
+                      message={
+                        errors.recruiters?.[
+                          index
+                        ]?.email?.message
+                      }
+                      visible={isSubmitted}
+                    />
+                  </View>
+
+                  {/* Mobile Position */}
+                  <View
+                    style={
+                      styles.mobileField
+                    }
+                  >
+                    <FieldLabel
+                      label="Position"
+                      required
+                      colors={colors}
+                    />
+
+                    <Controller
+                      control={control}
+                      name={`recruiters.${index}.position`}
+                      render={({
+                        field: {
+                          onChange,
+                          value,
+                        },
+                      }) => (
+                        <TextInput
+                          value={value}
+                          onChangeText={
+                            onChange
+                          }
+                          placeholder="Software Engineer"
+                          placeholderTextColor={
+                            colors.textSecondary
+                          }
+                          style={[
+                            styles.input,
+                            {
+                              backgroundColor:
+                                colors.background,
+
+                              borderColor:
+                                errors
+                                  .recruiters?.[
+                                  index
+                                ]?.position
+                                  ? "#EF4444"
+                                  : colors.border,
+
+                              color:
+                                colors.text,
+                            },
+                          ]}
+                        />
+                      )}
+                    />
+
+                    <FieldError
+                      message={
+                        errors.recruiters?.[
+                          index
+                        ]?.position?.message
+                      }
+                      visible={isSubmitted}
+                    />
+                  </View>
+
+                  {fields.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        remove(index)
+                      }
+                      style={[
+                        styles.mobileRemoveButton,
+                        {
+                          borderColor:
+                            "#FCA5A5",
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={15}
+                        color="#EF4444"
+                      />
+
+                      <Text
+                        style={
+                          styles.mobileRemoveText
+                        }
+                      >
+                        Remove Recruiter
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </View>
+          )
+        )}
+
+        {/* Add recruiter */}
         <TouchableOpacity
           onPress={() =>
             append({
@@ -1244,7 +1448,10 @@ export default function AddJobScreen() {
           }
           style={[
             styles.addButton,
-            { borderColor: colors.primary },
+            {
+              borderColor:
+                colors.primary,
+            },
           ]}
         >
           <Ionicons
@@ -1256,7 +1463,10 @@ export default function AddJobScreen() {
           <Text
             style={[
               styles.addButtonText,
-              { color: colors.primary },
+              {
+                color:
+                  colors.primary,
+              },
             ]}
           >
             Add Another Recruiter
@@ -1270,13 +1480,17 @@ export default function AddJobScreen() {
         <View
           style={[
             styles.sectionHeader,
-            { marginTop: 8 },
+            {
+              marginTop: 8,
+            },
           ]}
         >
           <Text
             style={[
               styles.sectionTitle,
-              { color: colors.text },
+              {
+                color: colors.text,
+              },
             ]}
           >
             Email Template
@@ -1285,10 +1499,14 @@ export default function AddJobScreen() {
           <Text
             style={[
               styles.sectionSubtitle,
-              { color: colors.textSecondary },
+              {
+                color:
+                  colors.textSecondary,
+              },
             ]}
           >
-            Choose default or write your own
+            Choose default or write your
+            own
           </Text>
         </View>
 
@@ -1296,18 +1514,26 @@ export default function AddJobScreen() {
           style={[
             styles.templateToggleRow,
             {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
+              backgroundColor:
+                colors.card,
+
+              borderColor:
+                colors.border,
             },
           ]}
         >
-          <View style={styles.templateToggleLeft}>
+          <View
+            style={
+              styles.templateToggleLeft
+            }
+          >
             <View
               style={[
                 styles.templateIconBox,
                 {
                   backgroundColor:
-                    colors.primary + "15",
+                    colors.primary +
+                    "15",
                 },
               ]}
             >
@@ -1318,11 +1544,16 @@ export default function AddJobScreen() {
               />
             </View>
 
-            <View style={{ flex: 1 }}>
+            <View
+              style={{ flex: 1 }}
+            >
               <Text
                 style={[
                   styles.templateToggleTitle,
-                  { color: colors.text },
+                  {
+                    color:
+                      colors.text,
+                  },
                 ]}
               >
                 Use Default Template
@@ -1331,11 +1562,14 @@ export default function AddJobScreen() {
               <Text
                 style={[
                   styles.templateToggleSubtitle,
-                  { color: colors.textSecondary },
+                  {
+                    color:
+                      colors.textSecondary,
+                  },
                 ]}
               >
-                Variables filled from your profile on
-                send
+                Variables filled from your
+                profile on send
               </Text>
             </View>
           </View>
@@ -1344,30 +1578,41 @@ export default function AddJobScreen() {
             control={control}
             name="useDefaultTemplate"
             render={({
-              field: { onChange, value },
+              field: {
+                onChange,
+                value,
+              },
             }) => (
               <Switch
                 value={value}
                 onValueChange={onChange}
                 trackColor={{
                   false: colors.border,
-                  true: colors.primary + "70",
+                  true:
+                    colors.primary +
+                    "70",
                 }}
                 thumbColor={
-                  value ? colors.primary : "#9CA3AF"
+                  value
+                    ? colors.primary
+                    : "#9CA3AF"
                 }
               />
             )}
           />
         </View>
 
+        {/* Default template */}
         {useDefault ? (
           <View
             style={[
               styles.templateReadonlyCard,
               {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
+                backgroundColor:
+                  colors.card,
+
+                borderColor:
+                  colors.border,
               },
             ]}
           >
@@ -1377,15 +1622,22 @@ export default function AddJobScreen() {
                 {
                   backgroundColor:
                     colors.background,
-                  borderBottomColor: colors.border,
+
+                  borderBottomColor:
+                    colors.border,
                 },
               ]}
             >
-              <View style={{ flex: 1 }}>
+              <View
+                style={{ flex: 1 }}
+              >
                 <Text
                   style={[
                     styles.templateTag,
-                    { color: colors.primary },
+                    {
+                      color:
+                        colors.primary,
+                    },
                   ]}
                 >
                   SUBJECT
@@ -1394,7 +1646,10 @@ export default function AddJobScreen() {
                 <Text
                   style={[
                     styles.templateSubjectText,
-                    { color: colors.text },
+                    {
+                      color:
+                        colors.text,
+                    },
                   ]}
                 >
                   {DEFAULT_SUBJECT}
@@ -1406,7 +1661,8 @@ export default function AddJobScreen() {
                   styles.readonlyPill,
                   {
                     backgroundColor:
-                      colors.primary + "15",
+                      colors.primary +
+                      "15",
                   },
                 ]}
               >
@@ -1419,7 +1675,10 @@ export default function AddJobScreen() {
                 <Text
                   style={[
                     styles.readonlyPillText,
-                    { color: colors.primary },
+                    {
+                      color:
+                        colors.primary,
+                    },
                   ]}
                 >
                   Read-only
@@ -1427,11 +1686,18 @@ export default function AddJobScreen() {
               </View>
             </View>
 
-            <View style={styles.templateBodySection}>
+            <View
+              style={
+                styles.templateBodySection
+              }
+            >
               <Text
                 style={[
                   styles.templateTag,
-                  { color: colors.textSecondary },
+                  {
+                    color:
+                      colors.textSecondary,
+                  },
                 ]}
               >
                 BODY
@@ -1440,7 +1706,10 @@ export default function AddJobScreen() {
               <Text
                 style={[
                   styles.templateBodyText,
-                  { color: colors.text },
+                  {
+                    color:
+                      colors.text,
+                  },
                 ]}
               >
                 {DEFAULT_BODY}
@@ -1451,22 +1720,30 @@ export default function AddJobScreen() {
               style={[
                 styles.templateVarsHint,
                 {
-                  borderTopColor: colors.border,
+                  borderTopColor:
+                    colors.border,
+
                   backgroundColor:
-                    colors.primary + "06",
+                    colors.primary +
+                    "06",
                 },
               ]}
             >
               <Ionicons
                 name="information-circle-outline"
                 size={13}
-                color={colors.textSecondary}
+                color={
+                  colors.textSecondary
+                }
               />
 
               <Text
                 style={[
                   styles.templateVarsHintText,
-                  { color: colors.textSecondary },
+                  {
+                    color:
+                      colors.textSecondary,
+                  },
                 ]}
               >
                 {"{{variables}} are replaced with your profile data when the email is sent"}
@@ -1474,20 +1751,31 @@ export default function AddJobScreen() {
             </View>
           </View>
         ) : (
+          /* Custom template */
           <View
             style={[
               styles.templateEditCard,
               {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
+                backgroundColor:
+                  colors.card,
+
+                borderColor:
+                  colors.border,
               },
             ]}
           >
-            <View style={styles.customSubjectSection}>
+            <View
+              style={
+                styles.customSubjectSection
+              }
+            >
               <Text
                 style={[
                   styles.templateTag,
-                  { color: colors.textSecondary },
+                  {
+                    color:
+                      colors.textSecondary,
+                  },
                 ]}
               >
                 SUBJECT
@@ -1497,12 +1785,19 @@ export default function AddJobScreen() {
                 control={control}
                 name="customSubject"
                 render={({
-                  field: { onChange, value },
+                  field: {
+                    onChange,
+                    value,
+                  },
                 }) => (
                   <TextInput
                     value={value}
-                    onChangeText={onChange}
-                    placeholder={DEFAULT_SUBJECT}
+                    onChangeText={
+                      onChange
+                    }
+                    placeholder={
+                      DEFAULT_SUBJECT
+                    }
                     placeholderTextColor={
                       colors.textSecondary
                     }
@@ -1511,8 +1806,12 @@ export default function AddJobScreen() {
                       {
                         backgroundColor:
                           colors.background,
-                        borderColor: colors.border,
-                        color: colors.text,
+
+                        borderColor:
+                          colors.border,
+
+                        color:
+                          colors.text,
                       },
                     ]}
                   />
@@ -1523,15 +1822,25 @@ export default function AddJobScreen() {
             <View
               style={[
                 styles.templateDivider,
-                { backgroundColor: colors.border },
+                {
+                  backgroundColor:
+                    colors.border,
+                },
               ]}
             />
 
-            <View style={styles.varChipsSection}>
+            <View
+              style={
+                styles.varChipsSection
+              }
+            >
               <Text
                 style={[
                   styles.varChipsLabel,
-                  { color: colors.textSecondary },
+                  {
+                    color:
+                      colors.textSecondary,
+                  },
                 ]}
               >
                 Tap to insert:
@@ -1539,47 +1848,61 @@ export default function AddJobScreen() {
 
               <ScrollView
                 horizontal
-                showsHorizontalScrollIndicator={false}
+                showsHorizontalScrollIndicator={
+                  false
+                }
               >
                 <View
                   style={{
-                    flexDirection: "row",
+                    flexDirection:
+                      "row",
                     gap: 6,
                     paddingVertical: 4,
                   }}
                 >
-                  {TEMPLATE_VARS.map((v) => (
-                    <TouchableOpacity
-                      key={v}
-                      onPress={() => {
-                        const current =
-                          getValues("customBody") ?? "";
+                  {TEMPLATE_VARS.map(
+                    (variable) => (
+                      <TouchableOpacity
+                        key={variable}
+                        onPress={() => {
+                          const current =
+                            getValues(
+                              "customBody"
+                            ) ?? "";
 
-                        setValue(
-                          "customBody",
-                          current + v
-                        );
-                      }}
-                      style={[
-                        styles.varChip,
-                        {
-                          backgroundColor:
-                            colors.primary + "12",
-                          borderColor:
-                            colors.primary + "35",
-                        },
-                      ]}
-                    >
-                      <Text
+                          setValue(
+                            "customBody",
+                            current +
+                              variable
+                          );
+                        }}
                         style={[
-                          styles.varChipText,
-                          { color: colors.primary },
+                          styles.varChip,
+                          {
+                            backgroundColor:
+                              colors.primary +
+                              "12",
+
+                            borderColor:
+                              colors.primary +
+                              "35",
+                          },
                         ]}
                       >
-                        {v}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.varChipText,
+                            {
+                              color:
+                                colors.primary,
+                            },
+                          ]}
+                        >
+                          {variable}
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                  )}
                 </View>
               </ScrollView>
             </View>
@@ -1587,15 +1910,25 @@ export default function AddJobScreen() {
             <View
               style={[
                 styles.templateDivider,
-                { backgroundColor: colors.border },
+                {
+                  backgroundColor:
+                    colors.border,
+                },
               ]}
             />
 
-            <View style={styles.customBodySection}>
+            <View
+              style={
+                styles.customBodySection
+              }
+            >
               <Text
                 style={[
                   styles.templateTag,
-                  { color: colors.textSecondary },
+                  {
+                    color:
+                      colors.textSecondary,
+                  },
                 ]}
               >
                 BODY
@@ -1605,11 +1938,16 @@ export default function AddJobScreen() {
                 control={control}
                 name="customBody"
                 render={({
-                  field: { onChange, value },
+                  field: {
+                    onChange,
+                    value,
+                  },
                 }) => (
                   <TextInput
                     value={value}
-                    onChangeText={onChange}
+                    onChangeText={
+                      onChange
+                    }
                     placeholder={`Dear {{recruiterName}},\n\nI am writing to express my interest...`}
                     placeholderTextColor={
                       colors.textSecondary
@@ -1619,7 +1957,10 @@ export default function AddJobScreen() {
                     textAlignVertical="top"
                     style={[
                       styles.customBodyInput,
-                      { color: colors.text },
+                      {
+                        color:
+                          colors.text,
+                      },
                     ]}
                   />
                 )}
@@ -1635,13 +1976,17 @@ export default function AddJobScreen() {
         <View
           style={[
             styles.sectionHeader,
-            { marginTop: 8 },
+            {
+              marginTop: 8,
+            },
           ]}
         >
           <Text
             style={[
               styles.sectionTitle,
-              { color: colors.text },
+              {
+                color: colors.text,
+              },
             ]}
           >
             Schedule
@@ -1650,266 +1995,82 @@ export default function AddJobScreen() {
           <Text
             style={[
               styles.sectionSubtitle,
-              { color: colors.textSecondary },
-            ]}
-          >
-            Choose when your email should be sent
-          </Text>
-        </View>
-
-        {/* ──────────────────────────────────────────────────────────────── */}
-        {/* WEB PICKER */}
-        {/* ──────────────────────────────────────────────────────────────── */}
-
-        {isWeb && (
-          <View
-            style={[
-              styles.webPickerCard,
               {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
+                color:
+                  colors.textSecondary,
               },
             ]}
           >
-            <View style={styles.webPickerHeader}>
-              <View
-                style={[
-                  styles.webPickerIcon,
-                  {
-                    backgroundColor:
-                      colors.primary + "15",
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={18}
-                  color={colors.primary}
-                />
-              </View>
+            Choose when your email should
+            be sent
+          </Text>
+        </View>
 
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.webPickerTitle,
-                    { color: colors.text },
-                  ]}
-                >
-                  Schedule Date & Time
-                </Text>
+        {/* YOUR OTHER PROJECT'S DATE FIELD */}
+        <View
+          style={[
+            styles.scheduleFieldCard,
+            {
+              backgroundColor:
+                colors.card,
 
-                <Text
-                  style={[
-                    styles.webPickerSubtitle,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Select the date and time using your
-                  browser
-                </Text>
-              </View>
-            </View>
+              borderColor:
+                colors.border,
+            },
+          ]}
+        >
+          <DateField
+            label="Schedule Date & Time"
+            value={scheduledFor}
+            onChange={setScheduledFor}
+          />
 
-            <View style={styles.webPickerFields}>
-              <View style={styles.webPickerField}>
-                <Text
-                  style={[
-                    styles.webPickerLabel,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  DATE
-                </Text>
+          <Text
+            style={[
+              styles.scheduleHint,
+              {
+                color:
+                  colors.textSecondary,
+              },
+            ]}
+          >
+            Select a date and time at least
+            1 minute in the future.
+          </Text>
+        </View>
 
-                <input
-                  type="date"
-                  value={webDate}
-                  min={toWebDateValue(new Date())}
-                  onChange={(e) =>
-                    handleWebDateChange(
-                      e.target.value
-                    )
-                  }
-                  style={{
-                    width: "100%",
-                    height: 44,
-                    borderRadius: 8,
-                    border: `1px solid ${colors.border}`,
-                    backgroundColor:
-                      colors.background,
-                    color: colors.text,
-                    padding: "0 10px",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                    outline: "none",
-                  }}
-                />
-              </View>
-
-              <View style={styles.webPickerField}>
-                <Text
-                  style={[
-                    styles.webPickerLabel,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  TIME
-                </Text>
-
-                <input
-                  type="time"
-                  value={webTime}
-                  onChange={(e) =>
-                    handleWebTimeChange(
-                      e.target.value
-                    )
-                  }
-                  style={{
-                    width: "100%",
-                    height: 44,
-                    borderRadius: 8,
-                    border: `1px solid ${colors.border}`,
-                    backgroundColor:
-                      colors.background,
-                    color: colors.text,
-                    padding: "0 10px",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                    outline: "none",
-                  }}
-                />
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* ──────────────────────────────────────────────────────────────── */}
-        {/* IOS / ANDROID picker */}
-        {/* ──────────────────────────────────────────────────────────────── */}
-
-        {!isWeb && (
-          <>
-            {showDatePicker && (
-              <DateTimePicker
-                value={pickerTempDate}
-                mode="date"
-                display={
-                  Platform.OS === "ios"
-                    ? "spinner"
-                    : "default"
-                }
-                minimumDate={new Date()}
-                onChange={onDateChange}
-              />
-            )}
-
-            {showTimePicker && (
-              <DateTimePicker
-                value={pickerTempDate}
-                mode="time"
-                display={
-                  Platform.OS === "ios"
-                    ? "spinner"
-                    : "default"
-                }
-                onChange={onTimeChange}
-              />
-            )}
-
-            {Platform.OS === "ios" &&
-              (showDatePicker || showTimePicker) && (
-                <View
-                  style={[
-                    styles.iosPickerActions,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowDatePicker(false);
-                      setShowTimePicker(false);
-                    }}
-                    style={styles.iosPickerCancel}
-                  >
-                    <Text
-                      style={[
-                        styles.iosPickerCancelText,
-                        {
-                          color:
-                            colors.textSecondary,
-                        },
-                      ]}
-                    >
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={confirmIOSPicker}
-                    style={[
-                      styles.iosPickerConfirm,
-                      {
-                        backgroundColor:
-                          colors.primary,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={
-                        styles.iosPickerConfirmText
-                      }
-                    >
-                      Confirm
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-          </>
-        )}
-
-        {/* ──────────────────────────────────────────────────────────────── */}
         {/* Scheduled banner */}
-        {/* ──────────────────────────────────────────────────────────────── */}
-
-        {scheduledDate && (
-          <View style={styles.scheduledBanner}>
+        {!!scheduledFor && (
+          <View
+            style={styles.scheduledBanner}
+          >
             <Ionicons
               name="time-outline"
               size={17}
               color="#D97706"
             />
 
-            <View style={{ flex: 1 }}>
-              <Text style={styles.scheduledTitle}>
+            <View
+              style={{ flex: 1 }}
+            >
+              <Text
+                style={
+                  styles.scheduledTitle
+                }
+              >
                 Scheduled For
               </Text>
 
-              <Text style={styles.scheduledText}>
+              <Text
+                style={
+                  styles.scheduledText
+                }
+              >
                 {formatScheduledDisplay(
-                  scheduledDate
+                  scheduledFor
                 )}
               </Text>
             </View>
-
-            <TouchableOpacity
-              onPress={openDatePicker}
-              style={styles.scheduledEditBtn}
-              hitSlop={{
-                top: 8,
-                bottom: 8,
-                left: 8,
-                right: 8,
-              }}
-            >
-              <Ionicons
-                name="pencil-outline"
-                size={15}
-                color="#D97706"
-              />
-            </TouchableOpacity>
 
             <TouchableOpacity
               onPress={clearSchedule}
@@ -1933,31 +2094,34 @@ export default function AddJobScreen() {
         {/* Action buttons */}
         {/* ──────────────────────────────────────────────────────────────── */}
 
-        <View style={styles.actionRow}>
+        <View
+          style={styles.actionRow}
+        >
           <TouchableOpacity
             disabled={submitting}
-            onPress={() => {
-              if (scheduledDate) {
-                onSchedule();
-              } else {
-                openDatePicker();
-              }
-            }}
+            onPress={onSchedule}
             style={[
               styles.scheduleButton,
+
               {
-                borderColor: colors.primary,
+                borderColor:
+                  colors.primary,
               },
+
               submitting &&
-                submitMode === "schedule" &&
+                submitMode ===
+                  "schedule" &&
                 styles.disabledButton,
             ]}
             activeOpacity={0.75}
           >
             {submitting &&
-            submitMode === "schedule" ? (
+            submitMode ===
+              "schedule" ? (
               <ActivityIndicator
-                color={colors.primary}
+                color={
+                  colors.primary
+                }
                 size="small"
               />
             ) : (
@@ -1965,16 +2129,21 @@ export default function AddJobScreen() {
                 <Ionicons
                   name="time-outline"
                   size={18}
-                  color={colors.primary}
+                  color={
+                    colors.primary
+                  }
                 />
 
                 <Text
                   style={[
                     styles.scheduleButtonText,
-                    { color: colors.primary },
+                    {
+                      color:
+                        colors.primary,
+                    },
                   ]}
                 >
-                  {scheduledDate
+                  {scheduledFor
                     ? "Send Scheduled"
                     : "Schedule"}
                 </Text>
@@ -1987,16 +2156,21 @@ export default function AddJobScreen() {
             onPress={onSendNow}
             style={[
               styles.sendButton,
+
               {
-                backgroundColor: colors.primary,
+                backgroundColor:
+                  colors.primary,
               },
+
               submitting &&
-                submitMode === "now" &&
+                submitMode ===
+                  "now" &&
                 styles.disabledButton,
             ]}
             activeOpacity={0.85}
           >
-            {submitting && submitMode === "now" ? (
+            {submitting &&
+            submitMode === "now" ? (
               <ActivityIndicator
                 color="#fff"
                 size="small"
@@ -2009,7 +2183,11 @@ export default function AddJobScreen() {
                   color="#fff"
                 />
 
-                <Text style={styles.sendButtonText}>
+                <Text
+                  style={
+                    styles.sendButtonText
+                  }
+                >
                   Send Now
                 </Text>
               </>
@@ -2017,7 +2195,9 @@ export default function AddJobScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 50 }} />
+        <View
+          style={{ height: 50 }}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -2258,7 +2438,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     padding: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth:
+      StyleSheet.hairlineWidth,
     gap: 10,
   },
 
@@ -2304,7 +2485,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 6,
     padding: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth:
+      StyleSheet.hairlineWidth,
   },
 
   templateVarsHintText: {
@@ -2334,7 +2516,8 @@ const styles = StyleSheet.create({
   },
 
   templateDivider: {
-    height: StyleSheet.hairlineWidth,
+    height:
+      StyleSheet.hairlineWidth,
   },
 
   varChipsSection: {
@@ -2372,61 +2555,21 @@ const styles = StyleSheet.create({
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Web picker
+  // Schedule
   // ─────────────────────────────────────────────────────────────────────────
 
-  webPickerCard: {
+  scheduleFieldCard: {
     borderWidth: 1,
     borderRadius: 10,
     padding: 14,
     marginBottom: 14,
   },
 
-  webPickerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 14,
+  scheduleHint: {
+    fontSize: 10,
+    marginTop: 7,
+    lineHeight: 15,
   },
-
-  webPickerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  webPickerTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  webPickerSubtitle: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-
-  webPickerFields: {
-    flexDirection: "row",
-    gap: 10,
-  },
-
-  webPickerField: {
-    flex: 1,
-    minWidth: 0,
-  },
-
-  webPickerLabel: {
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    marginBottom: 5,
-  },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Scheduled banner
-  // ─────────────────────────────────────────────────────────────────────────
 
   scheduledBanner: {
     flexDirection: "row",
@@ -2452,49 +2595,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  scheduledEditBtn: {
-    marginRight: 4,
-  },
-
   // ─────────────────────────────────────────────────────────────────────────
-  // iOS picker actions
-  // ─────────────────────────────────────────────────────────────────────────
-
-  iosPickerActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-    borderWidth: 1,
-    borderRadius: 10,
-    marginBottom: 14,
-    gap: 10,
-  },
-
-  iosPickerCancel: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-
-  iosPickerCancelText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  iosPickerConfirm: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-
-  iosPickerConfirmText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Action buttons
+  // Actions
   // ─────────────────────────────────────────────────────────────────────────
 
   actionRow: {

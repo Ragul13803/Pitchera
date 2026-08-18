@@ -17,6 +17,7 @@ import {
 import { applyGlobalFontPatch } from "@/globalFontPatch";
 
 import "../global.css";
+import Toast from "react-native-toast-message";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -41,6 +42,7 @@ export default function RootLayout() {
   applyGlobalFontPatch();
 
   return (
+    <>
     <ThemeProvider>
       <AuthProvider>
       <Head>
@@ -53,5 +55,7 @@ export default function RootLayout() {
         />
       </AuthProvider>
     </ThemeProvider>
+    <Toast />
+    </>
   );
 }

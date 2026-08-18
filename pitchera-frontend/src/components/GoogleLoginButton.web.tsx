@@ -97,7 +97,7 @@ export default function GoogleLoginButton({
         authData.user
       );
 
-      console.log('✅ Google auth successful:', authData.user.email);
+      console.log('✅ Google auth successful for web:', authData.user.email);
 
       Toast.show({
         type: "success",

@@ -54,8 +54,8 @@ async function processPendingEmails(): Promise<void> {
           email.recipient_email,
           email.recipient_name || "",
           email.subject,
-          email.body,
-          attachments
+          // email.body,
+          // attachments
         );
 
         await pool.query(
