@@ -421,7 +421,7 @@ export default function AddJobScreen() {
       const endpoint =
         mode === "schedule" ? "/applications/schedule" : "/applications/send";
 
-      const response = await api.post(endpoint, payload);
+      const response: any = await api.post(endpoint, payload);
       const resData = response?.data ?? response ?? {};
       const count = data.recruiters.length;
 
@@ -515,8 +515,9 @@ const [gmailStatus, setGmailStatus] = useState<{
 // Check Gmail on mount
 useEffect(() => {
   api.get("/gmail/status")
-    .then((res) => {
+    .then((res: any) => {
       const data = res?.data ?? res;
+      
       setGmailStatus({
         checked: true,
         connected: data?.connected === true,

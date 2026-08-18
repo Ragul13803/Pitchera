@@ -14,6 +14,7 @@ import {
 
 import BOT_IMAGE from '@/assets/images/bluebot.png';
 import GOOGLE_IMAGE from '@/assets/images/google.png';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ChatWindowProps {
   onClose: () => void;
@@ -48,39 +49,65 @@ const COLORS = {
 };
 
 const MOCK_AI_RESPONSES = [
-  'Thanks for your message! I’m here to help you.',
-  'That’s a great question. Let me help you with that.',
-  'Sure! I can help you with that. This is a mock response for now.',
-  'Got it! Your request has been received successfully.',
-  'Thanks for reaching out. How else can I assist you?',
+  'I can help you improve your resume, optimize your professional profile, and make your job applications stronger.',
+
+  'Based on your Pitchera profile, I can help you identify areas that may need improvement before you apply for jobs.',
+
+  'I can help you create a personalized job application email that highlights your skills and experience for a specific position.',
+
+  'I can help you organize and track your job applications so you can easily see which applications are pending, submitted, or completed.',
+
+  'If you share the job description with me, I can help you tailor your resume and application email to better match the role.',
+
+  'I can help you prepare for your job search by improving your resume, profile, application emails, and interview preparation.',
+
+  'Your Pitchera profile is the foundation of your job search. I can help you make your skills, experience, and achievements stand out to employers.',
+
+  'I can help you write a professional application email that you can send directly through your connected Gmail account.',
 ];
 
 const MOCK_GOOGLE_RESPONSES = [
-  '🔎 Google Search mode is selected. Your search results will appear here once the Google Search API is connected.',
-  '🔎 I’m ready to search Google for you. Connect your search API to return live results.',
-  '🔎 Search mode is active. Enter your query and I’ll search the web once the API is connected.',
+  '🔎 I can search the web for current job openings that match your skills and experience once Google Search API integration is connected.',
+
+  '🔎 I can help you find relevant job postings from companies and job boards based on your profile.',
+
+  '🔎 Search mode is ready. Try something like “React Native developer jobs in Bangalore” or “remote frontend developer jobs”.',
+
+  '🔎 I can search for recent job opportunities, company career pages, and relevant openings once the Google Search API is connected.',
+
+  '🔎 Looking for a specific role? Tell me the job title, location, experience level, or remote preference and I can search for matching opportunities.',
 ];
 
 const SUGGESTIONS = [
   {
-    icon: '📊',
-    label: 'Track my order',
-    text: 'I want to track my order',
+    icon: 'document-text-outline' as const,
+    label: 'Improve my resume',
+    text: 'How can I improve my resume?',
   },
   {
-    icon: '❓',
-    label: 'Get help',
-    text: 'I need some help',
+    icon: 'briefcase-outline' as const,
+    label: 'Find suitable jobs',
+    text: 'Help me find jobs that match my profile',
   },
   {
-    icon: '📦',
-    label: 'My shipment',
-    text: 'Where is my shipment?',
+    icon: 'mail-outline' as const,
+    label: 'Write application email',
+    text: 'Write a personalized job application email for me',
   },
   {
-    icon: '💬',
-    label: 'Support',
-    text: 'I want to contact support',
+    icon: 'checkmark-circle-outline' as const,
+    label: 'Track applications',
+    text: 'Show me how I can track my job applications',
+  },
+  {
+    icon: 'person-outline' as const,
+    label: 'Improve my profile',
+    text: 'How can I improve my Pitchera profile?',
+  },
+  {
+    icon: 'logo-google' as const,
+    label: 'Search for jobs',
+    text: 'Search Google for relevant job openings',
   },
 ];
 
@@ -93,7 +120,7 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
     {
       id: 'welcome',
       sender: 'bot',
-      text: 'Hi! 👋 I’m Pitchera AI Assistant. How can I help you today?',
+      text: 'Hi! 👋 I’m Pitchera AI Assistant. I can help you improve your resume, find relevant jobs, manage applications, and write personalized application emails.',
     },
   ]);
 
@@ -171,13 +198,13 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
     setMessages((prev) => [
       ...prev,
       {
-        id: `${Date.now()}-mode`,
-        sender: 'bot',
-        text:
-          mode === 'ai'
-            ? '🤖 Pitchera AI mode is now active.'
-            : '🔎 Google Search mode is now active.',
-      },
+      id: `${Date.now()}-mode`,
+      sender: 'bot',
+      text:
+        mode === 'ai'
+          ? '🤖 Pitchera AI is ready. I can help with your resume, job applications, profile, and application emails.'
+          : '🔎 Google Search is ready. I can help you search for current job opportunities and company career pages.',
+    },
     ]);
   };
 
@@ -407,28 +434,29 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
               {SUGGESTIONS.map((suggestion) => (
                 <Pressable
                   key={suggestion.text}
-                  onPress={() =>
-                    sendMessage(suggestion.text)
-                  }
+                  onPress={() => sendMessage(suggestion.text)}
                   style={({ pressed }) => [
                     styles.suggestionChip,
-                    pressed &&
-                      styles.suggestionPressed,
+                    pressed && styles.suggestionPressed,
                   ]}
                 >
                   <View style={styles.suggestionIconBox}>
-                    <Text style={styles.suggestionIcon}>
-                      {suggestion.icon}
-                    </Text>
+                    <Ionicons
+                      name={suggestion.icon}
+                      size={17}
+                      color={COLORS.primary}
+                    />
                   </View>
 
                   <Text style={styles.suggestionText}>
                     {suggestion.label}
                   </Text>
 
-                  <Text style={styles.suggestionArrow}>
-                    ›
-                  </Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={17}
+                    color={COLORS.textMuted}
+                  />
                 </Pressable>
               ))}
             </View>
@@ -462,14 +490,14 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
             value={input}
             onChangeText={setInput}
             placeholder={
-              isLoading
-                ? searchMode === 'ai'
-                  ? 'AI is thinking...'
-                  : 'Searching Google...'
-                : searchMode === 'ai'
-                  ? 'Ask Pitchera AI...'
-                  : 'Search Google...'
-            }
+  isLoading
+    ? searchMode === 'ai'
+      ? 'Pitchera AI is thinking...'
+      : 'Searching for jobs...'
+    : searchMode === 'ai'
+      ? 'Ask about your resume, jobs or applications...'
+      : 'Search for jobs, companies or openings...'
+}
             placeholderTextColor={COLORS.textMuted}
             multiline
             maxLength={1000}
@@ -504,11 +532,11 @@ const ChatWindow: FC<ChatWindowProps> = ({ onClose }) => {
           </Pressable>
         </View>
 
-        <Text style={styles.inputHint}>
-          {searchMode === 'ai'
-            ? 'AI responses may not always be accurate'
-            : 'Google Search mode • Search results require API integration'}
-        </Text>
+          <Text style={styles.inputHint}>
+  {searchMode === 'ai'
+    ? 'Pitchera AI • Resume & job application assistant'
+    : 'Google Search • Find current job opportunities'}
+</Text>
       </View>
     </KeyboardAvoidingView>
   );

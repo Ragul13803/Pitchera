@@ -8,12 +8,15 @@ import {
   Image,
 } from "react-native";
 import { Link, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+
 import PITCHERA_FULL_LOGO from "@/assets/images/pitchera_full_logo.png";
 import { useDeviceType } from "@/hooks/useDeviceType";
 
-export default function HomePage() {
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
-  const {isMobile, width } = useDeviceType();
+export default function HomePage() {
+  const { isMobile, width } = useDeviceType();
 
   const handleGetStarted = () => {
     router.push("/login");
@@ -28,36 +31,30 @@ export default function HomePage() {
       {/* ================= HEADER ================= */}
 
       <View style={styles.headerWrapper}>
-        <View
-          style={getHeaderStyle(width)}
-        >
+        <View style={getHeaderStyle(width)}>
           <Pressable onPress={() => router.push("/")}>
             <View style={styles.brand}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={PITCHERA_FULL_LOGO}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
+              <View style={styles.logoContainer}>
+                <Image
+                  source={PITCHERA_FULL_LOGO}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+              </View>
             </View>
-          </View>
           </Pressable>
 
           {!isMobile ? (
             <View style={styles.headerLinks}>
               <Link href="/privacy" asChild>
                 <Pressable>
-                  <Text style={styles.headerLink}>
-                    Privacy
-                  </Text>
+                  <Text style={styles.headerLink}>Privacy</Text>
                 </Pressable>
               </Link>
 
               <Link href="/terms" asChild>
                 <Pressable>
-                  <Text style={styles.headerLink}>
-                    Terms
-                  </Text>
+                  <Text style={styles.headerLink}>Terms</Text>
                 </Pressable>
               </Link>
 
@@ -65,9 +62,7 @@ export default function HomePage() {
                 style={styles.headerSignIn}
                 onPress={handleGetStarted}
               >
-                <Text style={styles.headerSignInText}>
-                  Sign In
-                </Text>
+                <Text style={styles.headerSignInText}>Sign In</Text>
               </Pressable>
             </View>
           ) : (
@@ -75,9 +70,7 @@ export default function HomePage() {
               style={styles.mobileSignIn}
               onPress={handleGetStarted}
             >
-              <Text style={styles.mobileSignInText}>
-                Sign In
-              </Text>
+              <Text style={styles.mobileSignInText}>Sign In</Text>
             </Pressable>
           )}
         </View>
@@ -89,9 +82,7 @@ export default function HomePage() {
         <View style={styles.heroGlowOne} />
         <View style={styles.heroGlowTwo} />
 
-        <View
-          style={getHeroContentStyle(width)}
-        >
+        <View style={getHeroContentStyle(width)}>
           <View style={styles.badge}>
             <View style={styles.badgeDot} />
 
@@ -100,70 +91,50 @@ export default function HomePage() {
             </Text>
           </View>
 
-          <Text
-            style={getHeroTitleStyle(width)}
-          >
+          <Text style={getHeroTitleStyle(width)}>
             Your job search,
             {"\n"}
-            <Text style={styles.heroAccent}>
-              organized.
-            </Text>
+            <Text style={styles.heroAccent}>organized.</Text>
           </Text>
 
-          <Text
-            style={getHeroDescriptionStyle(width)}
-          >
-            Keep your professional profile, resumes,
-            applications, and personalized outreach in one
-            simple workspace.
+          <Text style={getHeroDescriptionStyle(width)}>
+            Keep your professional profile, resumes, applications, and
+            personalized outreach in one simple workspace.
           </Text>
 
-          <View
-            style={getHeroButtonsStyle(isMobile)}
-          >
+          <View style={getHeroButtonsStyle(isMobile)}>
             <Pressable
               style={getPrimaryButtonStyle(isMobile)}
               onPress={handleGetStarted}
             >
-              <Text style={styles.primaryButtonText}>
-                Get Started
-              </Text>
+              <Text style={styles.primaryButtonText}>Get Started</Text>
 
-              <Text style={styles.primaryButtonArrow}>
-                →
-              </Text>
+              <Ionicons
+                name="arrow-forward"
+                size={18}
+                color="#ffffff"
+                style={styles.primaryButtonIcon}
+              />
             </Pressable>
 
             <Link href="/privacy" asChild>
-              <Pressable
-                style={getSecondaryButtonStyle(isMobile)}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  Learn More
-                </Text>
+              <Pressable style={getSecondaryButtonStyle(isMobile)}>
+                <Text style={styles.secondaryButtonText}>Learn More</Text>
               </Pressable>
             </Link>
           </View>
 
-          <View
-            style={getHeroTrustStyle(isMobile)}
-          >
+          <View style={getHeroTrustStyle(isMobile)}>
             <View style={styles.trustItem}>
-              <Text style={styles.trustNumber}>
-                01
-              </Text>
+              <Text style={styles.trustNumber}>01</Text>
 
-              <Text style={styles.trustText}>
-                One workspace
-              </Text>
+              <Text style={styles.trustText}>One workspace</Text>
             </View>
 
             <View style={styles.trustDivider} />
 
             <View style={styles.trustItem}>
-              <Text style={styles.trustNumber}>
-                02
-              </Text>
+              <Text style={styles.trustNumber}>02</Text>
 
               <Text style={styles.trustText}>
                 Organized applications
@@ -173,9 +144,7 @@ export default function HomePage() {
             <View style={styles.trustDivider} />
 
             <View style={styles.trustItem}>
-              <Text style={styles.trustNumber}>
-                03
-              </Text>
+              <Text style={styles.trustNumber}>03</Text>
 
               <Text style={styles.trustText}>
                 Personalized outreach
@@ -188,9 +157,7 @@ export default function HomePage() {
       {/* ================= STATS ================= */}
 
       <View style={styles.statsWrapper}>
-        <View
-          style={getStatsStyle(width)}
-        >
+        <View style={getStatsStyle(width)}>
           <Stat
             number="1"
             label="Professional profile"
@@ -228,32 +195,30 @@ export default function HomePage() {
 
       {/* ================= FEATURES ================= */}
 
-      <View
-        style={getFeatureGridStyle(width)}
-      >
+      <View style={getFeatureGridStyle(width)}>
         <Feature
-          icon="👤"
+          icon="person-outline"
           number="01"
           title="Professional Profile"
           description="Build a central professional profile containing your experience, education, skills, achievements, and career information."
         />
 
         <Feature
-          icon="📄"
+          icon="document-text-outline"
           number="02"
           title="Resume Management"
           description="Keep your resumes organized and ready to use whenever a new opportunity comes your way."
         />
 
         <Feature
-          icon="💼"
+          icon="briefcase-outline"
           number="03"
           title="Application Tracking"
           description="Track companies, positions, application dates, statuses, notes, and other important details."
         />
 
         <Feature
-          icon="✉️"
+          icon="mail-outline"
           number="04"
           title="Personalized Emails"
           description="Create personalized application outreach and send it through your connected Gmail account."
@@ -263,28 +228,18 @@ export default function HomePage() {
       {/* ================= WHY PITCHERA ================= */}
 
       <View style={styles.darkSection}>
-        <View
-          style={getDarkSectionContentStyle(width)}
-        >
-          <View
-            style={getDarkSectionTextStyle(width)}
-          >
-            <Text style={styles.darkEyebrow}>
-              WHY PITCHERA?
-            </Text>
+        <View style={getDarkSectionContentStyle(width)}>
+          <View style={getDarkSectionTextStyle(width)}>
+            <Text style={styles.darkEyebrow}>WHY PITCHERA?</Text>
 
-            <Text
-              style={getDarkTitleStyle(width)}
-            >
-              Stop managing your job search across scattered
-              tools.
+            <Text style={getDarkTitleStyle(width)}>
+              Stop managing your job search across scattered tools.
             </Text>
 
             <Text style={styles.darkDescription}>
-              Spreadsheets, folders, email drafts, notes, and
-              bookmarks can make a job search unnecessarily
-              complicated. Pitchera brings the essential pieces
-              together into one focused workspace.
+              Spreadsheets, folders, email drafts, notes, and bookmarks can
+              make a job search unnecessarily complicated. Pitchera brings the
+              essential pieces together into one focused workspace.
             </Text>
 
             <Benefit
@@ -303,9 +258,7 @@ export default function HomePage() {
             />
           </View>
 
-          <View
-            style={getDashboardMockupStyle(width)}
-          >
+          <View style={getDashboardMockupStyle(width)}>
             <View style={styles.mockupTop}>
               <View style={styles.mockupDots}>
                 <View style={styles.mockupDot} />
@@ -313,26 +266,13 @@ export default function HomePage() {
                 <View style={styles.mockupDot} />
               </View>
 
-              <Text style={styles.mockupTitle}>
-                Applications
-              </Text>
+              <Text style={styles.mockupTitle}>Applications</Text>
             </View>
 
             <View style={styles.mockupStatsRow}>
-              <MockupStat
-                number="12"
-                label="Applied"
-              />
-
-              <MockupStat
-                number="5"
-                label="In review"
-              />
-
-              <MockupStat
-                number="2"
-                label="Interview"
-              />
+              <MockupStat number="12" label="Applied" />
+              <MockupStat number="5" label="In review" />
+              <MockupStat number="2" label="Interview" />
             </View>
 
             <MockupApplication
@@ -368,9 +308,7 @@ export default function HomePage() {
         width={width}
       />
 
-      <View
-        style={getWorkflowStyle(width)}
-      >
+      <View style={getWorkflowStyle(width)}>
         <WorkflowStep
           number="01"
           title="Build your profile"
@@ -398,13 +336,13 @@ export default function HomePage() {
 
       {/* ================= GMAIL ================= */}
 
-      <View
-        style={getIntegrationStyle(width)}
-      >
+      <View style={getIntegrationStyle(width)}>
         <View style={styles.integrationIcon}>
-          <Text style={styles.integrationIconText}>
-            G
-          </Text>
+          <Ionicons
+            name="logo-google"
+            size={30}
+            color="#4285F4"
+          />
         </View>
 
         <View style={styles.integrationContent}>
@@ -419,16 +357,13 @@ export default function HomePage() {
           </Text>
 
           <Text style={styles.integrationDescription}>
-            Pitchera can connect to your Google account when
-            you choose to authorize Gmail access. This makes
-            it possible to send personalized job application
-            emails directly through your connected Gmail
+            Pitchera can connect to your Google account when you choose to
+            authorize Gmail access. This makes it possible to send personalized
+            job application emails directly through your connected Gmail
             account.
           </Text>
 
-          <View
-            style={getIntegrationPointsStyle(width)}
-          >
+          <View style={getIntegrationPointsStyle(width)}>
             <IntegrationPoint text="Authorization is optional" />
             <IntegrationPoint text="You control when access is granted" />
             <IntegrationPoint text="Used only for authorized features" />
@@ -446,9 +381,7 @@ export default function HomePage() {
           width={width}
         />
 
-        <View
-          style={getBenefitCardsStyle(width)}
-        >
+        <View style={getBenefitCardsStyle(width)}>
           <BenefitCard
             title="Stay organized"
             description="Keep your professional information, resumes, and applications in one consistent system."
@@ -468,9 +401,7 @@ export default function HomePage() {
 
       {/* ================= FAQ ================= */}
 
-      <View
-        style={getFaqSectionStyle(width)}
-      >
+      <View style={getFaqSectionStyle(width)}>
         <SectionIntro
           eyebrow="FAQ"
           title="Frequently asked questions."
@@ -503,28 +434,22 @@ export default function HomePage() {
 
       {/* ================= FINAL CTA ================= */}
 
-      <View
-        style={getFinalCTAStyle(width)}
-      >
+      <View style={getFinalCTAStyle(width)}>
         <View style={styles.finalCTAGlow} />
 
         <Text style={styles.finalCTAEyebrow}>
           START YOUR NEXT SEARCH
         </Text>
 
-        <Text
-          style={getFinalCTATitleStyle(width)}
-        >
+        <Text style={getFinalCTATitleStyle(width)}>
           Your next opportunity deserves
           {"\n"}
           a better system.
         </Text>
 
-        <Text
-          style={getFinalCTADescriptionStyle(width)}
-        >
-          Organize your professional profile, resumes,
-          applications, and outreach with Pitchera.
+        <Text style={getFinalCTADescriptionStyle(width)}>
+          Organize your professional profile, resumes, applications, and
+          outreach with Pitchera.
         </Text>
 
         <Pressable
@@ -535,49 +460,45 @@ export default function HomePage() {
             Get Started with Pitchera
           </Text>
 
-          <Text style={styles.finalCTAArrow}>
-            →
-          </Text>
+          <Ionicons
+            name="arrow-forward"
+            size={18}
+            color="#ffffff"
+            style={styles.finalCTAIcon}
+          />
         </Pressable>
       </View>
 
       {/* ================= FOOTER ================= */}
 
       <View style={styles.footer}>
-          <View style={styles.brand}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={PITCHERA_FULL_LOGO}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
+        <View style={styles.brand}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={PITCHERA_FULL_LOGO}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
+        </View>
 
         <Text style={styles.footerDescription}>
-          A focused workspace for managing your professional
-          profile, resumes, job applications, and personalized
-          application emails.
+          A focused workspace for managing your professional profile, resumes,
+          job applications, and personalized application emails.
         </Text>
 
         <View style={styles.footerLinks}>
           <Link href="/privacy" asChild>
             <Pressable>
-              <Text style={styles.footerLink}>
-                Privacy Policy
-              </Text>
+              <Text style={styles.footerLink}>Privacy Policy</Text>
             </Pressable>
           </Link>
 
-          <Text style={styles.footerSeparator}>
-            •
-          </Text>
+          <Text style={styles.footerSeparator}>•</Text>
 
           <Link href="/terms" asChild>
             <Pressable>
-              <Text style={styles.footerLink}>
-                Terms of Service
-              </Text>
+              <Text style={styles.footerLink}>Terms of Service</Text>
             </Pressable>
           </Link>
         </View>
@@ -607,19 +528,11 @@ function SectionIntro({
 }) {
   return (
     <View style={getSectionIntroStyle(width)}>
-      <Text style={styles.sectionEyebrow}>
-        {eyebrow}
-      </Text>
+      <Text style={styles.sectionEyebrow}>{eyebrow}</Text>
 
-      <Text
-        style={getSectionTitleStyle(width)}
-      >
-        {title}
-      </Text>
+      <Text style={getSectionTitleStyle(width)}>{title}</Text>
 
-      <Text
-        style={getSectionDescriptionStyle(width)}
-      >
+      <Text style={getSectionDescriptionStyle(width)}>
         {description}
       </Text>
     </View>
@@ -637,18 +550,12 @@ function Stat({
 }) {
   return (
     <View style={styles.stat}>
-      <Text style={styles.statNumber}>
-        {number}
-      </Text>
+      <Text style={styles.statNumber}>{number}</Text>
 
       <View style={styles.statText}>
-        <Text style={styles.statLabel}>
-          {label}
-        </Text>
+        <Text style={styles.statLabel}>{label}</Text>
 
-        <Text style={styles.statDescription}>
-          {description}
-        </Text>
+        <Text style={styles.statDescription}>{description}</Text>
       </View>
     </View>
   );
@@ -660,7 +567,7 @@ function Feature({
   title,
   description,
 }: {
-  icon: string;
+  icon: IoniconName;
   number: string;
   title: string;
   description: string;
@@ -669,19 +576,17 @@ function Feature({
     <View style={styles.featureCard}>
       <View style={styles.featureTop}>
         <View style={styles.featureIcon}>
-          <Text style={styles.featureIconText}>
-            {icon}
-          </Text>
+          <Ionicons
+            name={icon}
+            size={25}
+            color="#2563eb"
+          />
         </View>
 
-        <Text style={styles.featureNumber}>
-          {number}
-        </Text>
+        <Text style={styles.featureNumber}>{number}</Text>
       </View>
 
-      <Text style={styles.featureTitle}>
-        {title}
-      </Text>
+      <Text style={styles.featureTitle}>{title}</Text>
 
       <Text style={styles.featureDescription}>
         {description}
@@ -702,19 +607,17 @@ function Benefit({
   return (
     <View style={styles.darkBenefit}>
       <View style={styles.checkCircle}>
-        <Text style={styles.checkText}>
-          ✓
-        </Text>
+        <Ionicons
+          name="checkmark"
+          size={15}
+          color="#ffffff"
+        />
       </View>
 
       <View style={styles.darkBenefitContent}>
-        <Text style={styles.darkBenefitTitle}>
-          {title}
-        </Text>
+        <Text style={styles.darkBenefitTitle}>{title}</Text>
 
-        <Text
-          style={styles.darkBenefitDescription}
-        >
+        <Text style={styles.darkBenefitDescription}>
           {description}
         </Text>
       </View>
@@ -731,13 +634,9 @@ function MockupStat({
 }) {
   return (
     <View style={styles.mockupStat}>
-      <Text style={styles.mockupStatNumber}>
-        {number}
-      </Text>
+      <Text style={styles.mockupStatNumber}>{number}</Text>
 
-      <Text style={styles.mockupStatLabel}>
-        {label}
-      </Text>
+      <Text style={styles.mockupStatLabel}>{label}</Text>
     </View>
   );
 }
@@ -755,30 +654,20 @@ function MockupApplication({
 }) {
   return (
     <View style={styles.mockupApplication}>
-      <View
-        style={getCompanyAvatarStyle(color)}
-      >
+      <View style={getCompanyAvatarStyle(color)}>
         <Text style={styles.companyAvatarText}>
           {company.charAt(0)}
         </Text>
       </View>
 
       <View style={styles.mockupApplicationInfo}>
-        <Text style={styles.mockupCompany}>
-          {company}
-        </Text>
+        <Text style={styles.mockupCompany}>{company}</Text>
 
-        <Text style={styles.mockupRole}>
-          {role}
-        </Text>
+        <Text style={styles.mockupRole}>{role}</Text>
       </View>
 
-      <View
-        style={getStatusBadgeStyle(color)}
-      >
-        <Text
-          style={getStatusTextStyle(color)}
-        >
+      <View style={getStatusBadgeStyle(color)}>
+        <Text style={getStatusTextStyle(color)}>
           {status}
         </Text>
       </View>
@@ -804,13 +693,9 @@ function WorkflowStep({
       </View>
 
       <View style={styles.workflowContent}>
-        <Text style={styles.workflowTitle}>
-          {title}
-        </Text>
+        <Text style={styles.workflowTitle}>{title}</Text>
 
-        <Text
-          style={styles.workflowDescription}
-        >
+        <Text style={styles.workflowDescription}>
           {description}
         </Text>
       </View>
@@ -826,9 +711,11 @@ function IntegrationPoint({
   return (
     <View style={styles.integrationPoint}>
       <View style={styles.integrationCheck}>
-        <Text style={styles.integrationCheckText}>
-          ✓
-        </Text>
+        <Ionicons
+          name="checkmark"
+          size={11}
+          color="#16a34a"
+        />
       </View>
 
       <Text style={styles.integrationPointText}>
@@ -848,18 +735,16 @@ function BenefitCard({
   return (
     <View style={styles.benefitCard}>
       <View style={styles.benefitCardIcon}>
-        <Text style={styles.benefitCardIconText}>
-          ✦
-        </Text>
+        <Ionicons
+          name="sparkles-outline"
+          size={20}
+          color="#2563eb"
+        />
       </View>
 
-      <Text style={styles.benefitCardTitle}>
-        {title}
-      </Text>
+      <Text style={styles.benefitCardTitle}>{title}</Text>
 
-      <Text
-        style={styles.benefitCardDescription}
-      >
+      <Text style={styles.benefitCardDescription}>
         {description}
       </Text>
     </View>
@@ -876,20 +761,18 @@ function FAQ({
   return (
     <View style={styles.faqItem}>
       <View style={styles.faqQuestionRow}>
-        <Text style={styles.faqQuestion}>
-          {question}
-        </Text>
+        <Text style={styles.faqQuestion}>{question}</Text>
 
         <View style={styles.faqPlus}>
-          <Text style={styles.faqPlusText}>
-            +
-          </Text>
+          <Ionicons
+            name="add"
+            size={19}
+            color="#64748b"
+          />
         </View>
       </View>
 
-      <Text style={styles.faqAnswer}>
-        {answer}
-      </Text>
+      <Text style={styles.faqAnswer}>{answer}</Text>
     </View>
   );
 }
@@ -949,18 +832,18 @@ function getHeroDescriptionStyle(width: number) {
 
 function getHeroButtonsStyle(isMobile: boolean) {
   return {
-    flexDirection: isMobile ? "column" as const : "row" as const,
+    flexDirection: isMobile ? ("column" as const) : ("row" as const),
     alignItems: "center" as const,
-    width: isMobile ? "100%" as const : undefined,
+    width: isMobile ? ("100%" as const) : undefined,
     marginTop: 34,
-    gap: 10
+    gap: 10,
   };
 }
 
 function getPrimaryButtonStyle(isMobile: boolean) {
   return {
     minWidth: isMobile ? undefined : 155,
-    width: isMobile ? "100%" as const : undefined,
+    width: isMobile ? ("100%" as const) : undefined,
     maxWidth: isMobile ? 360 : undefined,
     flexDirection: "row" as const,
     alignItems: "center" as const,
@@ -975,7 +858,7 @@ function getPrimaryButtonStyle(isMobile: boolean) {
 function getSecondaryButtonStyle(isMobile: boolean) {
   return {
     minWidth: isMobile ? undefined : 135,
-    width: isMobile ? "100%" as const : undefined,
+    width: isMobile ? ("100%" as const) : undefined,
     maxWidth: isMobile ? 360 : undefined,
     alignItems: "center" as const,
     justifyContent: "center" as const,
@@ -991,7 +874,7 @@ function getSecondaryButtonStyle(isMobile: boolean) {
 
 function getHeroTrustStyle(isMobile: boolean) {
   return {
-    flexDirection: isMobile ? "column" as const : "row" as const,
+    flexDirection: isMobile ? ("column" as const) : ("row" as const),
     alignItems: "center" as const,
     justifyContent: "center" as const,
     width: "100%" as const,
@@ -1055,7 +938,7 @@ function getFeatureGridStyle(width: number) {
     maxWidth: 1120,
     alignSelf: "center" as const,
     paddingHorizontal: width < 600 ? 16 : 24,
-    flexDirection: width < 600 ? "column" as const : "row" as const,
+    flexDirection: width < 600 ? ("column" as const) : ("row" as const),
     flexWrap: "wrap" as const,
   };
 }
@@ -1067,8 +950,10 @@ function getDarkSectionContentStyle(width: number) {
     alignSelf: "center" as const,
     paddingHorizontal: width < 600 ? 18 : 24,
     paddingVertical: width < 600 ? 60 : 90,
-    flexDirection: width < 850 ? "column" as const : "row" as const,
-    alignItems: width < 850 ? "stretch" as const : "center" as const,
+    flexDirection:
+      width < 850 ? ("column" as const) : ("row" as const),
+    alignItems:
+      width < 850 ? ("stretch" as const) : ("center" as const),
   };
 }
 
@@ -1092,7 +977,7 @@ function getDarkTitleStyle(width: number) {
 
 function getDashboardMockupStyle(width: number) {
   return {
-    width: width < 500 ? "100%" as const : 430,
+    width: width < 500 ? ("100%" as const) : 430,
     maxWidth: "100%" as const,
     marginTop: width < 850 ? 40 : 0,
     padding: width < 600 ? 14 : 18,
@@ -1112,7 +997,7 @@ function getWorkflowStyle(width: number) {
 
 function getIntegrationStyle(width: number) {
   return {
-    width: width < 600 ? "92%" as const : "100%" as const,
+    width: width < 600 ? ("92%" as const) : ("100%" as const),
     maxWidth: 1050,
     alignSelf: "center" as const,
     marginTop: width < 600 ? 45 : 70,
@@ -1122,14 +1007,17 @@ function getIntegrationStyle(width: number) {
     backgroundColor: "#f8fafc",
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    flexDirection: width < 700 ? "column" as const : "row" as const,
-    alignItems: width < 700 ? "stretch" as const : "flex-start" as const,
+    flexDirection:
+      width < 700 ? ("column" as const) : ("row" as const),
+    alignItems:
+      width < 700 ? ("stretch" as const) : ("flex-start" as const),
   };
 }
 
 function getIntegrationPointsStyle(width: number) {
   return {
-    flexDirection: width < 600 ? "column" as const : "row" as const,
+    flexDirection:
+      width < 600 ? ("column" as const) : ("row" as const),
     flexWrap: "wrap" as const,
     marginTop: 18,
   };
@@ -1141,7 +1029,8 @@ function getBenefitCardsStyle(width: number) {
     maxWidth: 1050,
     alignSelf: "center" as const,
     paddingHorizontal: width < 600 ? 16 : 24,
-    flexDirection: width < 700 ? "column" as const : "row" as const,
+    flexDirection:
+      width < 700 ? ("column" as const) : ("row" as const),
   };
 }
 
@@ -1158,7 +1047,7 @@ function getFinalCTAStyle(width: number) {
   return {
     position: "relative" as const,
     overflow: "hidden" as const,
-    width: width < 600 ? "92%" as const : "100%" as const,
+    width: width < 600 ? ("92%" as const) : ("100%" as const),
     maxWidth: 1050,
     alignSelf: "center" as const,
     alignItems: "center" as const,
@@ -1360,10 +1249,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
-  primaryButtonArrow: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "600",
+  primaryButtonIcon: {
+    marginLeft: 9,
   },
 
   secondaryButtonText: {
@@ -1482,10 +1369,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  featureIconText: {
-    fontSize: 23,
-  },
-
   featureNumber: {
     fontSize: 11,
     fontWeight: "900",
@@ -1551,12 +1434,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
-  },
-
-  checkText: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "900",
   },
 
   darkBenefitContent: {
@@ -1718,12 +1595,6 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
   },
 
-  integrationIconText: {
-    fontSize: 27,
-    fontWeight: "900",
-    color: "#4285f4",
-  },
-
   integrationContent: {
     flex: 1,
   },
@@ -1775,12 +1646,6 @@ const styles = StyleSheet.create({
     marginRight: 7,
   },
 
-  integrationCheckText: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: "#16a34a",
-  },
-
   integrationPointText: {
     fontSize: 12,
     color: "#475569",
@@ -1814,11 +1679,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 17,
-  },
-
-  benefitCardIconText: {
-    fontSize: 19,
-    color: "#2563eb",
   },
 
   benefitCardTitle: {
@@ -1872,12 +1732,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  faqPlusText: {
-    fontSize: 19,
-    lineHeight: 21,
-    color: "#64748b",
-  },
-
   faqAnswer: {
     fontSize: 13,
     lineHeight: 21,
@@ -1908,12 +1762,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  finalCTADescription: {
-    maxWidth: 600,
-    textAlign: "center",
-    color: "#94a3b8",
-  },
-
   finalCTAButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1930,9 +1778,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
 
-  finalCTAArrow: {
-    fontSize: 18,
-    color: "#ffffff",
+  finalCTAIcon: {
     marginLeft: 12,
   },
 
@@ -1947,11 +1793,6 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 45,
     backgroundColor: "#ffffff",
-  },
-
-  footerLogo: {
-    width: 155,
-    height: 46,
   },
 
   footerDescription: {
@@ -1985,22 +1826,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 18,
   },
-    brand: {
+
+  /* BRAND / LOGO */
+
+  brand: {
     width: "100%",
     alignItems: "center",
-    // marginBottom: 24,
   },
 
   logoContainer: {
     width: 220,
     height: 70,
-
     borderRadius: 8,
-
     overflow: "hidden",
-
     backgroundColor: "#F8FAFC",
-
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2009,5 +1848,4 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-
 });

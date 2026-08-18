@@ -28,9 +28,9 @@ export default function Dashboard() {
         </View>
       </View>
 
-      <View style={styles.card}>
+      {/* <View style={styles.card}>
         <Text style={{ fontSize: 16 }}>Dashboard content goes here</Text>
-      </View>
+      </View> */}
     </ScrollView>
   );
 }

@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { useLogout } from "@/hooks/useLogout";
 import PopupModal from "@/components/PopupModal";
+import api from "@/services/api";
 
 interface PitcheraUser {
   id: number;
@@ -32,9 +33,36 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [showLogout, setShowLogout] = useState(false);
 
+  const [gmailStatus, setGmailStatus] = useState<{
+    checked: boolean;
+    connected: boolean;
+    gmailAddress: string | null;
+  }>({ checked: false, connected: false, gmailAddress: null });
+  
+
   useEffect(() => {
     loadUser();
   }, []);
+
+  // Check Gmail on mount
+  useEffect(() => {
+    api.get("/gmail/status")
+      .then((res: any) => {
+        const data = res?.data ?? res;
+        console.log('data', data);
+        
+        
+        setGmailStatus({
+          checked: true,
+          connected: data?.connected === true,
+          gmailAddress: data?.gmailAddress ?? null,
+        });
+      })
+      .catch(() => {
+        setGmailStatus({ checked: true, connected: false, gmailAddress: null });
+      });
+  }, []);
+  
 
   const loadUser = async () => {
     try {
@@ -396,7 +424,7 @@ export default function ProfileScreen() {
             </View>
 
             {/* Email Verification */}
-            <View style={styles.infoRow}>
+            {/* <View style={styles.infoRow}>
               <View
                 style={[
                   styles.iconBox,
@@ -432,6 +460,62 @@ export default function ProfileScreen() {
                   ]}
                 >
                   Email Status
+                </Text>
+
+                <Text
+                  style={[
+                    styles.value,
+                    {
+                      color: user.isEmailVerified
+                        ? "#10B981"
+                        : "#F59E0B",
+                    },
+                  ]}
+                >
+                  {user.isEmailVerified
+                    ? "Verified"
+                    : "Not Verified"}
+                </Text>
+              </View>
+            </View> */}
+
+            {/* Gmail Connected Verification */}
+            <View style={styles.infoRow}>
+              <View
+                style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: gmailStatus?.connected
+                      ? "#10B98115"
+                      : "#F59E0B15",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={
+                    gmailStatus?.connected
+                      ? "checkmark-circle-outline"
+                      : "alert-circle-outline"
+                  }
+                  size={20}
+                  color={
+                    gmailStatus?.connected
+                      ? "#10B981"
+                      : "#F59E0B"
+                  }
+                />
+              </View>
+
+              <View style={styles.infoContent}>
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: colors.textSecondary,
+                    },
+                  ]}
+                >
+                  G-mail Status
                 </Text>
 
                 <Text

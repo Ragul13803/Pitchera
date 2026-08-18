@@ -307,7 +307,7 @@ export default function ApplicationScreen() {
     try {
       isRefresh ? setRefreshing(true) : setLoading(true);
       setError(null);
-      const res  = await api.get('/applications');
+      const res: any  = await api.get('/applications/getAllApplications');
       const data = (res?.data ?? res ?? []) as JobApplication[];
       setApplications(data);
     } catch (e: any) {
@@ -366,8 +366,8 @@ export default function ApplicationScreen() {
           </View>
         </View>
         <TouchableOpacity style={[s.addBtn, { backgroundColor: colors.primary }]} onPress={handleAdd}>
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={s.addBtnText}>New</Text>
+          <Ionicons name="add-circle" size={20} color="#fff" />
+          <Text style={s.addBtnText}>Add New</Text>
         </TouchableOpacity>
       </View>
 

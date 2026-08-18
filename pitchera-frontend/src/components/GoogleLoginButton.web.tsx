@@ -13,6 +13,7 @@ import api from '@/services/api';
 import { ApiError } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { Loading } from './ui/Loading';
+import Toast from 'react-native-toast-message';
 
 interface GoogleLoginButtonProps {
   onLoading?: (loading: boolean) => void;
@@ -97,6 +98,11 @@ export default function GoogleLoginButton({
       );
 
       console.log('✅ Google auth successful:', authData.user.email);
+
+      Toast.show({
+        type: "success",
+        text1: "Login Successful",
+      });
       
       // Navigate to dashboard
       router.replace('/(app)/dashboard');
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#D9DEE7',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2666ddff',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

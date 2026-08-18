@@ -1,6 +1,9 @@
+// backend/src/services/email.service.ts
+
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import pool from "../database/db";
 import { sendEmailViaGmail } from "./gmail.service";
+import { getSmartSalutation } from "../utils/email";
 
 interface EmailTemplate extends RowDataPacket {
   id: number;
@@ -56,10 +59,21 @@ export async function getUserTemplates(userId: number): Promise<EmailTemplate[]>
   return templates;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Send Job Application Emails
+//
+// recruiter.name is used for TWO SEPARATE purposes:
+//   1. `recruiterName` template var → smart salutation
+//      ("Dear John," / "Dear Hiring Team," / "Dear Sir/Madam,")
+//   2. Gmail "To:" display name → raw name as typed by user, or null
+//      (Gmail shows: "John Smith <john@co.com>" OR just "john@co.com")
+// These must NEVER be mixed.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function sendJobApplicationEmails(params: {
   userId: number;
   jobApplicationId: number;
-  recruiters: Array<{ name: string; email: string }>;
+  recruiters: Array<{ name?: string | null; email: string; position: string }>;
   subject: string;
   body: string;
   resumePath?: string;
@@ -67,10 +81,6 @@ export async function sendJobApplicationEmails(params: {
   gmailAccountId: number;
   templateVarsBase: Partial<TemplateVars>;
 }): Promise<{ sent: number; failed: number; errors: string[] }> {
-  const { client: gmailClient, account } = await import("./gmail.service").then(
-    (m) => m.getGmailClient(params.userId)
-  );
-
   const results = { sent: 0, failed: 0, errors: [] as string[] };
 
   const attachments = [
@@ -79,17 +89,24 @@ export async function sendJobApplicationEmails(params: {
   ];
 
   for (const recruiter of params.recruiters) {
-    const personalizedSubject = replaceTemplateVariables(params.subject, {
-      ...params.templateVarsBase,
-      recruiterName: recruiter.name,
-    });
+    // ── 1. Smart salutation for BODY ({{recruiterName}}) ────────────────────
+    const salutation = getSmartSalutation(recruiter.name, recruiter.email);
 
-    const personalizedBody = replaceTemplateVariables(params.body, {
+    const vars: Partial<TemplateVars> = {
       ...params.templateVarsBase,
-      recruiterName: recruiter.name,
-    });
+      position: recruiter.position?.trim() || params.templateVarsBase.position || "",
+      recruiterName: salutation,
+    };
 
-    // Create email log
+    const personalizedSubject = replaceTemplateVariables(params.subject, vars);
+    const personalizedBody = replaceTemplateVariables(params.body, vars);
+
+    // ── 2. Gmail "To:" display name — raw name, or null if not provided ────
+    const toDisplayName = recruiter.name?.trim() || null;
+
+    // For DB logging only — never leave recipient_name blank in the log table
+    const logDisplayName = recruiter.name?.trim() || recruiter.email.split("@")[0];
+
     const [logResult] = await pool.query<ResultSetHeader>(
       `INSERT INTO email_logs 
        (user_id, job_application_id, gmail_account_id, recipient_name, recipient_email, subject, body, status)
@@ -98,7 +115,7 @@ export async function sendJobApplicationEmails(params: {
         params.userId,
         params.jobApplicationId,
         params.gmailAccountId,
-        recruiter.name,
+        logDisplayName,
         recruiter.email.toLowerCase(),
         personalizedSubject,
         personalizedBody,
@@ -111,7 +128,7 @@ export async function sendJobApplicationEmails(params: {
       const messageId = await sendEmailViaGmail(
         params.userId,
         recruiter.email.toLowerCase(),
-        recruiter.name,
+        toDisplayName, // ✅ null → Gmail shows just the email, name → "Name <email>"
         personalizedSubject,
         personalizedBody,
         attachments
@@ -138,7 +155,6 @@ export async function sendJobApplicationEmails(params: {
     }
   }
 
-  // Update job application status
   const newStatus = results.sent > 0 ? "sent" : "failed";
   await pool.query(
     "UPDATE job_applications SET status = ?, applied_at = NOW(), updated_at = NOW() WHERE id = ?",
@@ -148,17 +164,34 @@ export async function sendJobApplicationEmails(params: {
   return results;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Schedule Email
+//
+// recipient_name stored here is the RAW name (or email-prefix fallback for
+// DB/NOT NULL columns). The scheduler/cron job passes this straight to
+// sendEmailViaGmail later — which itself decides whether to show it or not
+// based on whether it looks like a real name vs auto-generated fallback.
+//
+// IMPORTANT: subject/body are already personalized with the salutation BEFORE
+// calling this function (done in the controller) — because vars must reflect
+// the profile state AT SCHEDULE TIME, not at send time.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function scheduleEmail(params: {
   userId: number;
   jobApplicationId: number;
   gmailAccountId: number;
-  recipientName: string;
+  recipientName?: string | null;
   recipientEmail: string;
   subject: string;
   body: string;
   resumePath?: string;
   scheduledAt: Date;
 }): Promise<number> {
+  // Store raw name if provided, otherwise NULL (not a fallback) so the
+  // scheduler can correctly decide whether to show a name in "To:" or not.
+  const dbRecipientName = params.recipientName?.trim() || null;
+
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO scheduled_emails
      (user_id, job_application_id, gmail_account_id, recipient_name, recipient_email,
@@ -168,7 +201,7 @@ export async function scheduleEmail(params: {
       params.userId,
       params.jobApplicationId,
       params.gmailAccountId,
-      params.recipientName,
+      dbRecipientName,
       params.recipientEmail.toLowerCase(),
       params.subject,
       params.body,

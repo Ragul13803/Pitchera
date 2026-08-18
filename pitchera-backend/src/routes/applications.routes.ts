@@ -3,6 +3,7 @@ import { authenticate } from "../middleware/auth.middleware";
 import {
   sendApplication,
   scheduleApplication,
+  getAllApplications,
 } from "../controllers/applications.controller";
 
 const router = Router();
@@ -20,5 +21,7 @@ router.post("/send", sendApplication);
  * Schedule job application emails for future sending.
  */
 router.post("/schedule", scheduleApplication);
+
+router.get("/getAllApplications", getAllApplications);
 
 export default router;

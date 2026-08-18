@@ -1,3 +1,5 @@
+// backend/src/services/gmail.service.ts
+
 import { google } from "googleapis";
 import { RowDataPacket } from "mysql2";
 import pool from "../database/db";
@@ -24,7 +26,6 @@ export async function saveGmailAccount(
   const encryptedAccess = encrypt(accessToken);
   const encryptedRefresh = encrypt(refreshToken);
 
-  // Upsert gmail account
   const [existing] = await pool.query<GmailAccount[]>(
     "SELECT id FROM gmail_accounts WHERE user_id = ?",
     [userId]
@@ -40,7 +41,6 @@ export async function saveGmailAccount(
     );
     return existing[0].id;
   } else {
-    // const { ResultSetHeader } = await import("mysql2");
     const [result] = await pool.query(
       `INSERT INTO gmail_accounts 
        (user_id, gmail_address, access_token_encrypted, refresh_token_encrypted, token_expiry)
@@ -69,11 +69,9 @@ export async function getGmailClient(userId: number) {
     refresh_token: refreshToken,
   });
 
-  // Refresh access token if needed
   const { credentials } = await client.refreshAccessToken();
   client.setCredentials(credentials);
 
-  // Update stored access token
   if (credentials.access_token) {
     const encryptedAccess = encrypt(credentials.access_token);
     await pool.query(
@@ -91,10 +89,11 @@ export async function getGmailClient(userId: number) {
   return { client, account };
 }
 
+// ✅ toName now accepts string | null | undefined
 export async function sendEmailViaGmail(
   userId: number,
   to: string,
-  toName: string,
+  toName: string | null | undefined,
   subject: string,
   body: string,
   attachmentPaths: string[] = []
@@ -128,10 +127,31 @@ export async function sendEmailViaGmail(
   return response.data.id || "";
 }
 
+/**
+ * Builds the "To:" header exactly like Gmail manual send (RFC 2822).
+ *
+ * With name:    John Smith <john@company.com>
+ * Special char: "Smith, John" <john@company.com>
+ * Without name: john@company.com
+ */
+function formatToHeader(toName: string | null | undefined, to: string): string {
+  const cleanEmail = to.trim().toLowerCase();
+  const cleanName = toName?.trim();
+
+  if (!cleanName) {
+    return cleanEmail;
+  }
+
+  const needsQuoting = /[,;"\\<>@()]/.test(cleanName);
+  const formattedName = needsQuoting ? `"${cleanName}"` : cleanName;
+
+  return `${formattedName} <${cleanEmail}>`;
+}
+
 async function buildMimeMessage(
   from: string,
   to: string,
-  toName: string,
+  toName: string | null | undefined,
   subject: string,
   body: string,
   attachmentPaths: string[]
@@ -142,7 +162,7 @@ async function buildMimeMessage(
 
   const lines: string[] = [
     `From: ${from}`,
-    `To: ${toName ? `${toName} <${to}>` : to}`,
+    `To: ${formatToHeader(toName, to)}`, // ✅ uses proper RFC 2822 formatting
     `Subject: ${subject}`,
     `MIME-Version: 1.0`,
     `Content-Type: multipart/mixed; boundary="${boundary}"`,

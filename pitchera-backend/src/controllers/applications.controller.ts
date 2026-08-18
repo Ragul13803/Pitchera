@@ -12,6 +12,7 @@ import {
 import { getGmailClient } from "../services/gmail.service";
 import { sendSuccess, sendError } from "../utils/response";
 import path from "path";
+import { getSmartSalutation } from "../utils/email";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,10 +36,6 @@ interface SchedulePayload extends SendPayload {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Validate recruiter array from new frontend shape.
- * Name is optional. Email + position are required.
- */
 function validateRecruiters(recruiters: RecruiterInput[]): string | null {
   if (!recruiters || recruiters.length === 0) {
     return "At least one recruiter is required.";
@@ -74,9 +71,6 @@ function validateRecruiters(recruiters: RecruiterInput[]): string | null {
   return null;
 }
 
-/**
- * Build template variable map from user profile.
- */
 async function buildTemplateVars(userId: number) {
   const [users] = await pool.query<RowDataPacket[]>(
     `SELECT u.first_name, u.last_name, u.email,
@@ -107,15 +101,12 @@ async function buildTemplateVars(userId: number) {
     linkedin: user.linkedin || "",
     github: user.github || "",
     portfolio: user.portfolio || "",
-    company: "",
+    company: "Direct Outreach",
     position: "",
     recruiterName: "",
   };
 }
 
-/**
- * Get primary resume absolute path (or most recent).
- */
 async function getPrimaryResumePath(userId: number): Promise<string | null> {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT file_path FROM resumes
@@ -142,26 +133,6 @@ async function getPrimaryResumePath(userId: number): Promise<string | null> {
 
 // ─── Send Now ─────────────────────────────────────────────────────────────────
 
-/**
- * POST /api/applications/send
- *
- * Frontend sends:
- * {
- *   recruiters: [{ name?, email, position }],
- *   emailBody: string,        ← template body from frontend (with {{vars}})
- *   emailSubject: string,     ← template subject from frontend (with {{vars}})
- *   useDefaultTemplate: bool
- * }
- *
- * Backend:
- * 1. Validates input
- * 2. Checks Gmail connected
- * 3. Builds profile-based template vars
- * 4. Creates ONE job_application row (grouped by first position)
- * 5. Sends individual personalized email per recruiter
- * 6. Each email logged in email_logs
- * 7. Returns real sent/failed counts
- */
 export async function sendApplication(
   req: AuthRequest,
   res: Response,
@@ -170,8 +141,6 @@ export async function sendApplication(
   try {
     const userId = req.user!.userId;
     const body: SendPayload = req.body;
-
-    // ── 1. Validate ──────────────────────────────────────────────────────────
 
     const recruiterError = validateRecruiters(body.recruiters);
     if (recruiterError) {
@@ -189,8 +158,6 @@ export async function sendApplication(
       return;
     }
 
-    // ── 2. Check Gmail connected ─────────────────────────────────────────────
-
     let gmailAccountId: number;
     try {
       const { account } = await getGmailClient(userId);
@@ -204,21 +171,8 @@ export async function sendApplication(
       return;
     }
 
-    // ── 3. Build template vars from user profile ─────────────────────────────
-
     const templateVarsBase = await buildTemplateVars(userId);
-
-    // ── 4. Get resume path ───────────────────────────────────────────────────
-
     const resumePath = await getPrimaryResumePath(userId);
-
-    // ── 5. Create job_application record ─────────────────────────────────────
-    //
-    // Since the new form is recruiter-centric (no single company/job title),
-    // we use the first recruiter's position as the job_title and
-    // "Direct Outreach" as company_name for the application record.
-    // This keeps the existing schema intact.
-
     const firstPosition = body.recruiters[0].position.trim();
 
     const [appResult] = await pool.query<ResultSetHeader>(
@@ -230,112 +184,44 @@ export async function sendApplication(
 
     const jobApplicationId = appResult.insertId;
 
-    // ── 6. Send one personalized email per recruiter ─────────────────────────
-    //
-    // For each recruiter we:
-    //   a) Set position = recruiter's specific position
-    //   b) Set recruiterName = recruiter's name (or email prefix if no name)
-    //   c) Replace all {{vars}} in both subject and body
-
-    const recruitersForSend = body.recruiters.map((r) => ({
-      // name passed to sendJobApplicationEmails — used for {{recruiterName}}
-      name: r.name?.trim() || r.email.trim().split("@")[0],
-      email: r.email.trim().toLowerCase(),
-      // carry position for per-recruiter template replacement
-      position: r.position.trim(),
-    }));
-
-    // We call the existing sendJobApplicationEmails but we need per-recruiter
-    // position substitution. We do it by pre-building the body per recruiter
-    // and passing them individually.
-
-    const results = { sent: 0, failed: 0, errors: [] as string[] };
-
-    for (const recruiter of recruitersForSend) {
-      // Build vars specific to this recruiter
-      const vars = {
-        ...templateVarsBase,
-        position: recruiter.position,
-        company: "Direct Outreach",
-        recruiterName: recruiter.name,
-      };
-
-      const personalizedSubject = replaceTemplateVariables(
-        body.emailSubject,
-        vars
-      );
-
-      const personalizedBody = replaceTemplateVariables(body.emailBody, vars);
-
-      // Use sendJobApplicationEmails with a single recruiter
-      // so we get proper email_logs entry per recruiter
-      const singleResult = await sendJobApplicationEmails({
-        userId,
-        jobApplicationId,
-        recruiters: [{ name: recruiter.name, email: recruiter.email }],
-        subject: personalizedSubject,
-        body: personalizedBody,
-        resumePath: resumePath || undefined,
-        gmailAccountId,
-        // vars already substituted — pass empty to avoid double-replace
-        templateVarsBase: {
-          firstName: "",
-          lastName: "",
-          email: "",
-          phone: "",
-          experience: "",
-          skills: "",
-          linkedin: "",
-          github: "",
-          portfolio: "",
-          company: "",
-          position: "",
-          recruiterName: "",
-        },
-      });
-
-      results.sent += singleResult.sent;
-      results.failed += singleResult.failed;
-      results.errors.push(...singleResult.errors);
-    }
-
-    // ── 7. Update job_application final status ───────────────────────────────
-
-    const finalStatus = results.sent > 0 ? "sent" : "failed";
-    await pool.query(
-      `UPDATE job_applications
-       SET status = ?, applied_at = NOW(), updated_at = NOW()
-       WHERE id = ?`,
-      [finalStatus, jobApplicationId]
-    );
-
-    // ── 8. Respond with real counts ──────────────────────────────────────────
-
-    const total = body.recruiters.length;
-    let message: string;
+    // ── Service handles salutation + To: header logic internally ────────────
+    const results = await sendJobApplicationEmails({
+      userId,
+      jobApplicationId,
+      gmailAccountId,
+      recruiters: body.recruiters.map((r) => ({
+        name: r.name?.trim() || null,
+        email: r.email.trim().toLowerCase(),
+        position: r.position.trim(),
+      })),
+      subject: body.emailSubject,
+      body: body.emailBody,
+      resumePath: resumePath || undefined,
+      templateVarsBase,
+    });
 
     if (results.failed === 0) {
-      message =
-        total === 1
+      sendSuccess(
+        res,
+        { sent: results.sent, failed: 0, errors: [], jobApplicationId },
+        results.sent === 1
           ? "Email sent successfully."
-          : `${results.sent} emails sent successfully.`;
+          : `${results.sent} emails sent successfully.`
+      );
     } else if (results.sent === 0) {
-      message = `All ${total} emails failed to send.`;
+      sendError(res, `All emails failed to send.\n${results.errors.join("\n")}`, 500);
     } else {
-      message = `${results.sent} sent, ${results.failed} failed.`;
+      sendSuccess(
+        res,
+        {
+          sent: results.sent,
+          failed: results.failed,
+          errors: results.errors,
+          jobApplicationId,
+        },
+        `${results.sent} sent, ${results.failed} failed.`
+      );
     }
-
-    sendSuccess(
-      res,
-      {
-        sent: results.sent,
-        failed: results.failed,
-        total,
-        errors: results.errors,
-        jobApplicationId,
-      },
-      message
-    );
   } catch (error) {
     next(error);
   }
@@ -343,13 +229,6 @@ export async function sendApplication(
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
 
-/**
- * POST /api/applications/schedule
- *
- * Same payload as send + scheduledFor + timezone.
- * Inserts one scheduled_emails row per recruiter.
- * Template vars are resolved NOW and stored (so they reflect current profile).
- */
 export async function scheduleApplication(
   req: AuthRequest,
   res: Response,
@@ -358,8 +237,6 @@ export async function scheduleApplication(
   try {
     const userId = req.user!.userId;
     const body: SchedulePayload = req.body;
-
-    // ── 1. Validate ──────────────────────────────────────────────────────────
 
     const recruiterError = validateRecruiters(body.recruiters);
     if (recruiterError) {
@@ -398,8 +275,6 @@ export async function scheduleApplication(
       return;
     }
 
-    // ── 2. Check Gmail connected ─────────────────────────────────────────────
-
     let gmailAccountId: number;
     try {
       const { account } = await getGmailClient(userId);
@@ -413,16 +288,8 @@ export async function scheduleApplication(
       return;
     }
 
-    // ── 3. Build template vars ───────────────────────────────────────────────
-
     const templateVarsBase = await buildTemplateVars(userId);
-
-    // ── 4. Resume path ───────────────────────────────────────────────────────
-
     const resumePath = await getPrimaryResumePath(userId);
-
-    // ── 5. Create job_application record ─────────────────────────────────────
-
     const firstPosition = body.recruiters[0].position.trim();
 
     const [appResult] = await pool.query<ResultSetHeader>(
@@ -434,35 +301,29 @@ export async function scheduleApplication(
 
     const jobApplicationId = appResult.insertId;
 
-    // ── 6. Insert one scheduled_emails row per recruiter ─────────────────────
-
     const scheduledIds: number[] = [];
 
     for (const recruiter of body.recruiters) {
-      const recruiterName =
-        recruiter.name?.trim() ||
-        recruiter.email.trim().split("@")[0];
+      // ── Smart salutation for BODY — resolved NOW at schedule time ───────
+      const salutation = getSmartSalutation(recruiter.name, recruiter.email);
 
       const vars = {
         ...templateVarsBase,
         position: recruiter.position.trim(),
-        company: "Direct Outreach",
-        recruiterName,
+        recruiterName: salutation,
       };
 
-      // Resolve template vars NOW — stored in DB ready to send at scheduled time
-      const personalizedSubject = replaceTemplateVariables(
-        body.emailSubject,
-        vars
-      );
-
+      const personalizedSubject = replaceTemplateVariables(body.emailSubject, vars);
       const personalizedBody = replaceTemplateVariables(body.emailBody, vars);
+
+      // ── Raw name (or null) — used later by scheduler for Gmail "To:" ────
+      const recipientName = recruiter.name?.trim() || null;
 
       const id = await scheduleEmail({
         userId,
         jobApplicationId,
         gmailAccountId,
-        recipientName: recruiterName,
+        recipientName,
         recipientEmail: recruiter.email.trim().toLowerCase(),
         subject: personalizedSubject,
         body: personalizedBody,
@@ -473,13 +334,7 @@ export async function scheduleApplication(
       scheduledIds.push(id);
     }
 
-    // ── 7. Respond ───────────────────────────────────────────────────────────
-
     const total = body.recruiters.length;
-    const message =
-      total === 1
-        ? "Email scheduled successfully."
-        : `${total} emails scheduled successfully.`;
 
     sendSuccess(
       res,
@@ -489,7 +344,74 @@ export async function scheduleApplication(
         scheduledIds,
         jobApplicationId,
       },
-      message
+      total === 1
+        ? "Email scheduled successfully."
+        : `${total} emails scheduled successfully.`
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+//getAllApplications
+export async function getAllApplications(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const status = req.query.status as string | undefined;
+
+    const allowedStatuses = [
+      "draft",
+      "scheduled",
+      "sent",
+      "failed",
+      "interview",
+      "rejected",
+      "selected",
+      "offer",
+    ];
+
+    if (status && !allowedStatuses.includes(status)) {
+      sendError(res, "Invalid application status.", 400);
+      return;
+    }
+
+    let query = `
+      SELECT
+        id,
+        user_id,
+        company_name,
+        job_title,
+        job_url,
+        job_description,
+        status,
+        applied_at,
+        created_at,
+        updated_at
+      FROM job_applications
+      WHERE user_id = ?
+    `;
+
+    const params: any[] = [userId];
+
+    if (status) {
+      query += ` AND status = ?`;
+      params.push(status);
+    }
+
+    query += ` ORDER BY created_at DESC`;
+
+    const [applications] = await pool.query(query, params);
+
+    sendSuccess(
+      res,
+      applications,
+      status
+        ? `Applications with status '${status}' fetched successfully.`
+        : "All applications fetched successfully."
     );
   } catch (error) {
     next(error);

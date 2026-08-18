@@ -43,14 +43,14 @@ export default function ConnectGmailScreen() {
   const [disconnecting, setDisconnecting] = useState(false);
 
   // ── returnTo — where to go after connecting ──────────────────────────────
-  const returnTo = params.returnTo ?? "/(app)/add-job";
+  // const returnTo = params.returnTo ?? "/(app)/add-job";
 
   // ─── Check current Gmail status ───────────────────────────────────────────
 
   const checkStatus = useCallback(async () => {
     try {
       setState("checking");
-      const res = await api.get("/gmail/status");
+      const res: any = await api.get("/gmail/status");
       const data = res?.data ?? res;
 
       if (data?.connected && data?.gmailAddress) {
@@ -96,7 +96,7 @@ export default function ConnectGmailScreen() {
       setErrorMessage("");
 
       // Ask backend for the Google OAuth URL
-      const res = await api.get("/gmail/connect");
+      const res: any = await api.get("/gmail/connect");
       const data = res?.data ?? res;
       const url: string = data?.url ?? data?.data?.url ?? "";
 
@@ -219,7 +219,7 @@ export default function ConnectGmailScreen() {
       {/* Continue to send */}
       <TouchableOpacity
         style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-        onPress={() => router.push(returnTo as any)}
+        onPress={() => router.push('/applications/AddApplication' as any)}
         activeOpacity={0.85}
       >
         <Ionicons name="send-outline" size={18} color="#fff" />
