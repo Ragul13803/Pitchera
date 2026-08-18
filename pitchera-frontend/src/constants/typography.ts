@@ -1,20 +1,39 @@
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 export const FontFamily = {
   regular: Platform.select({
-    ios: 'System',
-    android: 'Roboto',
-    web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    ios: "CormorantRegular",
+    android: "CormorantRegular",
+    web: "CormorantRegular",
+    default: "CormorantRegular",
   }),
+
   medium: Platform.select({
-    ios: 'System',
-    android: 'Roboto-Medium',
-    web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    ios: "CormorantMedium",
+    android: "CormorantMedium",
+    web: "CormorantMedium",
+    default: "CormorantMedium",
   }),
+
+  semibold: Platform.select({
+    ios: "CormorantSemiBold",
+    android: "CormorantSemiBold",
+    web: "CormorantSemiBold",
+    default: "CormorantSemiBold",
+  }),
+
   bold: Platform.select({
-    ios: 'System',
-    android: 'Roboto-Bold',
-    web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    ios: "CormorantBold",
+    android: "CormorantBold",
+    web: "CormorantBold",
+    default: "CormorantBold",
+  }),
+
+  italic: Platform.select({
+    ios: "CormorantItalic",
+    android: "CormorantItalic",
+    web: "CormorantItalic",
+    default: "CormorantItalic",
   }),
 };
 
@@ -25,9 +44,9 @@ export const FontSize = {
   md: 16,
   lg: 18,
   xl: 20,
-  '2xl': 24,
-  '3xl': 28,
-  '4xl': 32,
+  "2xl": 24,
+  "3xl": 28,
+  "4xl": 32,
 };
 
 export const LineHeight = {

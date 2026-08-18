@@ -1,73 +1,99 @@
-import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps } from "react-native";
 
-import { Fonts, ThemeColor } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { ThemeColor } from "@/constants/theme";
+import { useTheme } from "@/hooks/use-theme";
 
 export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary' | 'code';
+  type?:
+    | "default"
+    | "title"
+    | "small"
+    | "smallBold"
+    | "subtitle"
+    | "link"
+    | "linkPrimary"
+    | "code";
+
   themeColor?: ThemeColor;
 };
 
-export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
+export function ThemedText({
+  style,
+  type = "default",
+  themeColor,
+  ...rest
+}: ThemedTextProps) {
   const theme = useTheme();
 
   return (
     <Text
+      {...rest}
       style={[
-        { color: theme[themeColor ?? 'text'] },
-        type === 'default' && styles.default,
-        type === 'title' && styles.title,
-        type === 'small' && styles.small,
-        type === 'smallBold' && styles.smallBold,
-        type === 'subtitle' && styles.subtitle,
-        type === 'link' && styles.link,
-        type === 'linkPrimary' && styles.linkPrimary,
-        type === 'code' && styles.code,
+        {
+          color: theme[themeColor ?? "text"],
+        },
+
+        type === "default" && styles.default,
+        type === "title" && styles.title,
+        type === "small" && styles.small,
+        type === "smallBold" && styles.smallBold,
+        type === "subtitle" && styles.subtitle,
+        type === "link" && styles.link,
+        type === "linkPrimary" && styles.linkPrimary,
+        type === "code" && styles.code,
+
         style,
       ]}
-      {...rest}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  small: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 500,
-  },
-  smallBold: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 700,
-  },
   default: {
+    fontFamily: "CormorantMedium",
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: 500,
   },
+
+  small: {
+    fontFamily: "CormorantRegular",
+    fontSize: 18,
+    lineHeight: 20,
+  },
+
+  smallBold: {
+    fontFamily: "CormorantBold",
+    fontSize: 18,
+    lineHeight: 20,
+  },
+
   title: {
+    fontFamily: "CormorantSemiBold",
     fontSize: 48,
-    fontWeight: 600,
     lineHeight: 52,
   },
+
   subtitle: {
-    fontSize: 32,
+    fontFamily: "CormorantSemiBold",
+    fontSize: 36,
     lineHeight: 44,
-    fontWeight: 600,
   },
+
   link: {
+    fontFamily: "CormorantRegular",
     lineHeight: 30,
     fontSize: 14,
   },
+
   linkPrimary: {
+    fontFamily: "CormorantMedium",
     lineHeight: 30,
     fontSize: 14,
-    color: '#3c87f7',
+    color: "#3c87f7",
   },
+
   code: {
-    fontFamily: Fonts.mono,
-    fontWeight: Platform.select({ android: 700 }) ?? 500,
+    fontFamily: "monospace",
     fontSize: 12,
   },
 });
