@@ -205,6 +205,77 @@ export async function getTemplates(
   }
 }
 
+function validateTemplateBody(body: any): string | null {
+  if (!body.name?.trim()) return "Template name is required.";
+  if (!body.subject?.trim()) return "Subject is required.";
+  if (!body.body?.trim()) return "Body is required.";
+  return null;
+}
+
+export async function createTemplate(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const validationError = validateTemplateBody(req.body);
+    if (validationError) { sendError(res, validationError, 400); return; }
+
+    const template = await emailService.createTemplate({
+      userId: req.user!.userId,
+      name: req.body.name.trim(),
+      subject: req.body.subject.trim(),
+      body: req.body.body.trim(),
+      isDefault: !!req.body.isDefault,
+    });
+    sendSuccess(res, template, "Template created successfully.", 201);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateTemplate(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const validationError = validateTemplateBody(req.body);
+    if (validationError) { sendError(res, validationError, 400); return; }
+
+    const template = await emailService.updateTemplate({
+      userId: req.user!.userId,
+      templateId: parseInt(req.params.id, 10),
+      name: req.body.name.trim(),
+      subject: req.body.subject.trim(),
+      body: req.body.body.trim(),
+      isDefault: !!req.body.isDefault,
+    });
+
+    if (!template) { sendError(res, "Template not found.", 404); return; }
+    sendSuccess(res, template, "Template updated successfully.");
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteTemplate(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const deleted = await emailService.deleteTemplate(
+      req.user!.userId,
+      parseInt(req.params.id, 10)
+    );
+    if (!deleted) { sendError(res, "Template not found.", 404); return; }
+    sendSuccess(res, null, "Template deleted successfully.");
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getDashboardStats(
   req: AuthRequest,
   res: Response,

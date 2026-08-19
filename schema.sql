@@ -177,19 +177,6 @@ CREATE TABLE IF NOT EXISTS gmail_accounts (
   CONSTRAINT fk_gmail_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Recruiters
-CREATE TABLE IF NOT EXISTS recruiters (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id INT UNSIGNED NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) NOT NULL,
-  company VARCHAR(255) NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_recruiters_user_id (user_id),
-  INDEX idx_recruiters_email (email),
-  CONSTRAINT fk_recruiters_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Email Templates
 CREATE TABLE IF NOT EXISTS email_templates (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -226,7 +213,6 @@ CREATE TABLE IF NOT EXISTS email_logs (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id INT UNSIGNED NOT NULL,
   job_application_id INT UNSIGNED NULL,
-  recruiter_id INT UNSIGNED NULL,
   gmail_account_id INT UNSIGNED NULL,
   recipient_name VARCHAR(255) NULL,
   recipient_email VARCHAR(255) NOT NULL,
@@ -243,7 +229,6 @@ CREATE TABLE IF NOT EXISTS email_logs (
   INDEX idx_email_logs_job_app (job_application_id),
   CONSTRAINT fk_email_logs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_email_logs_job_app FOREIGN KEY (job_application_id) REFERENCES job_applications(id) ON DELETE SET NULL,
-  CONSTRAINT fk_email_logs_recruiter FOREIGN KEY (recruiter_id) REFERENCES recruiters(id) ON DELETE SET NULL,
   CONSTRAINT fk_email_logs_gmail FOREIGN KEY (gmail_account_id) REFERENCES gmail_accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -259,41 +244,64 @@ CREATE TABLE IF NOT EXISTS scheduled_emails (
   subject VARCHAR(500) NOT NULL,
   body TEXT NOT NULL,
   resume_path VARCHAR(500) NULL,
+  gmail_draft_id VARCHAR(255) NULL,
   scheduled_at TIMESTAMP NOT NULL,
   status ENUM('scheduled','sending','sent','failed','cancelled') NOT NULL DEFAULT 'scheduled',
   retry_count INT UNSIGNED NOT NULL DEFAULT 0,
   max_retries INT UNSIGNED NOT NULL DEFAULT 3,
   error_message TEXT NULL,
+  gmail_message_id VARCHAR(255) NULL,
   sent_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_scheduled_emails_user_id (user_id),
   INDEX idx_scheduled_emails_status (status),
   INDEX idx_scheduled_emails_scheduled_at (scheduled_at),
+  INDEX idx_scheduled_emails_status_time (status, scheduled_at),
   CONSTRAINT fk_scheduled_emails_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_scheduled_emails_log FOREIGN KEY (email_log_id) REFERENCES email_logs(id) ON DELETE SET NULL,
   CONSTRAINT fk_scheduled_emails_job_app FOREIGN KEY (job_application_id) REFERENCES job_applications(id) ON DELETE SET NULL,
   CONSTRAINT fk_scheduled_emails_gmail FOREIGN KEY (gmail_account_id) REFERENCES gmail_accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Attachments
-CREATE TABLE IF NOT EXISTS attachments (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id INT UNSIGNED NOT NULL,
-  email_log_id INT UNSIGNED NULL,
-  original_filename VARCHAR(255) NOT NULL,
-  stored_filename VARCHAR(255) NOT NULL,
-  file_path VARCHAR(500) NOT NULL,
-  file_size INT UNSIGNED NOT NULL,
-  mime_type VARCHAR(100) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_attachments_user_id (user_id),
-  INDEX idx_attachments_email_log (email_log_id),
-  CONSTRAINT fk_attachments_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_attachments_log FOREIGN KEY (email_log_id) REFERENCES email_logs(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- Default system email template (inserted as a reference, user-specific templates created on signup)
 -- This is handled in application code
+
+-- ─────────────────────────────────────────────────
+-- RATE LIMIT TABLE
+-- One row per user per hour window.
+-- Automatically cleaned by a scheduled job or
+-- the application cleanup utility.
+-- ─────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS chat_rate_limits (
+  id            INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  user_id       INT UNSIGNED    NOT NULL,
+  window_start  DATETIME        NOT NULL COMMENT 'Top of the hour (minutes/seconds = 0)',
+  request_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_user_window (user_id, window_start),
+  INDEX idx_window_start (window_start)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- ─────────────────────────────────────────────────
+-- CHAT SESSIONS TABLE
+-- One row per user; messages stored as JSON.
+-- ─────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id     INT UNSIGNED NOT NULL UNIQUE,
+  messages    JSON         NOT NULL DEFAULT (JSON_ARRAY()),
+  last_active DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  INDEX idx_user_id (user_id),
+  INDEX idx_last_active (last_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

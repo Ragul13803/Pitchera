@@ -2,38 +2,38 @@ import { Platform } from "react-native";
 
 export const FontFamily = {
   regular: Platform.select({
-    ios: "CormorantRegular",
-    android: "CormorantRegular",
-    web: "CormorantRegular",
-    default: "CormorantRegular",
+    ios: "Alkatra_400Regular",
+    android: "Alkatra_400Regular",
+    web: "Alkatra_400Regular",
+    default: "Alkatra_400Regular",
   }),
 
   medium: Platform.select({
-    ios: "CormorantMedium",
-    android: "CormorantMedium",
-    web: "CormorantMedium",
-    default: "CormorantMedium",
+    ios: "Alkatra_400Regular",
+    android: "Alkatra_400Regular",
+    web: "Alkatra_400Regular",
+    default: "Alkatra_400Regular",
   }),
 
   semibold: Platform.select({
-    ios: "CormorantSemiBold",
-    android: "CormorantSemiBold",
-    web: "CormorantSemiBold",
-    default: "CormorantSemiBold",
+    ios: "Alkatra_400Regular",
+    android: "Alkatra_400Regular",
+    web: "Alkatra_400Regular",
+    default: "Alkatra_400Regular",
   }),
 
   bold: Platform.select({
-    ios: "CormorantBold",
-    android: "CormorantBold",
-    web: "CormorantBold",
-    default: "CormorantBold",
+    ios: "Alkatra_400Regular",
+    android: "Alkatra_400Regular",
+    web: "Alkatra_400Regular",
+    default: "Alkatra_400Regular",
   }),
 
   italic: Platform.select({
-    ios: "CormorantItalic",
-    android: "CormorantItalic",
-    web: "CormorantItalic",
-    default: "CormorantItalic",
+    ios: "Alkatra_400Regular",
+    android: "Alkatra_400Regular",
+    web: "Alkatra_400Regular",
+    default: "Alkatra_400Regular",
   }),
 };
 

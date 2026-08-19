@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 const items = [
   {
@@ -27,9 +28,10 @@ const items = [
 
 export function MobileTabs() {
   const pathname = usePathname();
+  const { colors } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
       {items.map((item) => {
         const active =
           item.route === '/'
@@ -47,16 +49,13 @@ export function MobileTabs() {
             <Ionicons
               name={item.icon}
               size={22}
-              color={
-                active
-                  ? '#2563EB'
-                  : '#94A3B8'
-              }
+              color={active ? colors.primary : colors.textSecondary}
             />
 
             <Text
               style={[
                 styles.label,
+                { color: active ? colors.primary : colors.textSecondary },
                 active && styles.activeLabel,
               ]}
             >
@@ -79,10 +78,7 @@ const styles = StyleSheet.create({
 
     height: 70,
 
-    backgroundColor: '#FFFFFF',
-
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
 
     flexDirection: 'row',
   },
@@ -98,11 +94,9 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 11,
-    color: '#94A3B8',
   },
 
   activeLabel: {
-    color: '#2563EB',
     fontWeight: '700',
   },
 });

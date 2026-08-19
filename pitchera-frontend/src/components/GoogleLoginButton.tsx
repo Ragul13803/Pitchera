@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   Image,
   Pressable,
   StyleSheet,
@@ -12,6 +10,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { authService } from '@/services/auth.service';
 import { ApiError } from '@/services/api';
 import { Loading } from './ui/Loading';
+import Toast from 'react-native-toast-message';
 
 
 interface GoogleLoginButtonProps {
@@ -46,7 +45,7 @@ export default function GoogleLoginButton({
         const { id_token } = response.params;
 
         if (!id_token) {
-          Alert.alert('Error', 'No ID token received from Google');
+          Toast.show({ type: 'error', text1: 'Error', text2: 'No ID token received from Google' });
           return;
         }
 
@@ -55,6 +54,7 @@ export default function GoogleLoginButton({
         });
 
         console.log('✅ Google auth successful:', result.user.email);
+        Toast.show({ type: 'success', text1: 'Login Successful' });
         router.replace('/(app)/dashboard');
       } catch (error: any) {
         console.error('Google auth error:', error);
@@ -66,19 +66,19 @@ export default function GoogleLoginButton({
           errorMessage = error.message;
         }
 
-        Alert.alert('Authentication Failed', errorMessage);
+        Toast.show({ type: 'error', text1: 'Authentication Failed', text2: errorMessage });
       } finally {
         setLoading(false);
         onLoading?.(false);
       }
     } else if (response?.type === 'error') {
-      Alert.alert('Error', 'Google authentication failed');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Google authentication failed' });
     }
   };
 
   const handlePress = async () => {
     if (!request) {
-      Alert.alert('Error', 'Google Sign-In is not ready yet');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Google Sign-In is not ready yet' });
       return;
     }
     await promptAsync();

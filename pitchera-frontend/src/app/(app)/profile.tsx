@@ -15,6 +15,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useLogout } from "@/hooks/useLogout";
 import PopupModal from "@/components/PopupModal";
 import api from "@/services/api";
+import Toast from "react-native-toast-message";
 
 interface PitcheraUser {
   id: number;
@@ -82,6 +83,7 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     setShowLogout(false);
     await logout();
+    Toast.show({ type: "success", text1: "Logout Successful!" });
   };
 
   if (loading) {
@@ -256,7 +258,7 @@ export default function ProfileScreen() {
             </Text>
 
             {/* First Name */}
-            <View style={styles.infoRow}>
+            <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
               <View
                 style={[
                   styles.iconBox,
@@ -298,7 +300,7 @@ export default function ProfileScreen() {
             </View>
 
             {/* Last Name */}
-            <View style={styles.infoRow}>
+            <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
               <View
                 style={[
                   styles.iconBox,
@@ -340,7 +342,7 @@ export default function ProfileScreen() {
             </View>
 
             {/* Email */}
-            <View style={styles.infoRow}>
+            <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
               <View
                 style={[
                   styles.iconBox,
@@ -382,7 +384,7 @@ export default function ProfileScreen() {
             </View>
 
             {/* User ID */}
-            <View style={styles.infoRow}>
+            <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
               <View
                 style={[
                   styles.iconBox,
@@ -480,7 +482,7 @@ export default function ProfileScreen() {
             </View> */}
 
             {/* Gmail Connected Verification */}
-            <View style={styles.infoRow}>
+            <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
               <View
                 style={[
                   styles.iconBox,
@@ -658,7 +660,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E5E7EB",
   },
 
   iconBox: {

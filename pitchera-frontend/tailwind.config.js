@@ -11,11 +11,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["CormorantGaramond_400Regular"],
-        medium: ["CormorantGaramond_500Medium"],
-        semibold: ["CormorantGaramond_600SemiBold"],
-        bold: ["CormorantGaramond_700Bold"],
-        italic: ["CormorantGaramond_400Regular_Italic"],
+        sans: ["Alkatra_400Regular"],
+        alkatra: ["Alkatra_400Regular"],
       },
     },
   },

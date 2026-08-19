@@ -59,6 +59,80 @@ export async function getUserTemplates(userId: number): Promise<EmailTemplate[]>
   return templates;
 }
 
+export async function createTemplate(params: {
+  userId: number;
+  name: string;
+  subject: string;
+  body: string;
+  isDefault: boolean;
+}): Promise<EmailTemplate> {
+  if (params.isDefault) {
+    await pool.query("UPDATE email_templates SET is_default = 0 WHERE user_id = ?", [
+      params.userId,
+    ]);
+  }
+
+  const [result] = await pool.query<ResultSetHeader>(
+    `INSERT INTO email_templates (user_id, name, subject, body, is_default)
+     VALUES (?, ?, ?, ?, ?)`,
+    [params.userId, params.name, params.subject, params.body, params.isDefault ? 1 : 0]
+  );
+
+  const [rows] = await pool.query<EmailTemplate[]>(
+    "SELECT * FROM email_templates WHERE id = ?",
+    [result.insertId]
+  );
+  return rows[0];
+}
+
+export async function updateTemplate(params: {
+  userId: number;
+  templateId: number;
+  name: string;
+  subject: string;
+  body: string;
+  isDefault: boolean;
+}): Promise<EmailTemplate | null> {
+  const [existing] = await pool.query<EmailTemplate[]>(
+    "SELECT id FROM email_templates WHERE id = ? AND user_id = ?",
+    [params.templateId, params.userId]
+  );
+  if (existing.length === 0) return null;
+
+  if (params.isDefault) {
+    await pool.query("UPDATE email_templates SET is_default = 0 WHERE user_id = ?", [
+      params.userId,
+    ]);
+  }
+
+  await pool.query(
+    `UPDATE email_templates SET name = ?, subject = ?, body = ?, is_default = ?, updated_at = NOW()
+     WHERE id = ? AND user_id = ?`,
+    [
+      params.name,
+      params.subject,
+      params.body,
+      params.isDefault ? 1 : 0,
+      params.templateId,
+      params.userId,
+    ]
+  );
+
+  const [rows] = await pool.query<EmailTemplate[]>(
+    "SELECT * FROM email_templates WHERE id = ?",
+    [params.templateId]
+  );
+  return rows[0];
+}
+
+export async function deleteTemplate(userId: number, templateId: number): Promise<boolean> {
+  const [result] = await pool.query<ResultSetHeader>(
+    "DELETE FROM email_templates WHERE id = ? AND user_id = ?",
+    [templateId, userId]
+  );
+  return result.affectedRows > 0;
+}
+
 /**
  * Send job application emails.
  *

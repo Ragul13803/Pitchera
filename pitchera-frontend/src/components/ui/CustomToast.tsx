@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '@/context/ThemeContext';
 
 type Props = {
   text1?: string;
@@ -23,6 +24,8 @@ export default function CustomToast({
   duration = 3000, // 3 seconds,
   icon
 }: Props) {
+  const { colors: themeColors } = useTheme();
+
   const colors = {
     success: '#22c55e',
     error: '#ef4444',
@@ -66,7 +69,7 @@ export default function CustomToast({
     width: Platform.OS === 'web' ? 380 : '92%',
     alignSelf: Platform.OS === 'web' ? 'flex-end' : 'center',
     minHeight: 60,
-    backgroundColor: '#fff',
+    backgroundColor: themeColors.card,
     borderRadius: 14,
     borderLeftWidth: 5,
     borderLeftColor: colors[type],
@@ -104,7 +107,7 @@ export default function CustomToast({
         marginLeft: 10,
         fontSize: 14,
         fontWeight: '700',
-        color: '#243440',
+        color: themeColors.text,
       }}
     >
       {text1}
@@ -125,7 +128,7 @@ export default function CustomToast({
     <MaterialCommunityIcons
       name="close"
       size={20}
-      color="#60717d"
+      color={themeColors.textSecondary}
     />
   </TouchableOpacity>
 
@@ -137,7 +140,7 @@ export default function CustomToast({
       left: 0,
       right: 0,
       height: 3,
-      backgroundColor: '#e5e7eb',
+      backgroundColor: themeColors.border,
     }}
   >
     <Animated.View

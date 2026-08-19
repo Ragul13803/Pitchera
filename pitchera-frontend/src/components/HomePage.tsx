@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Pressable,
   ScrollView,
@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import PITCHERA_FULL_LOGO from "@/assets/images/pitchera_full_logo.png";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import Toast from "react-native-toast-message";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 

@@ -4,6 +4,7 @@ import {
   sendApplication,
   scheduleApplication,
   getAllApplications,
+  processScheduledEmails,
 } from "../controllers/applications.controller";
 
 const router = Router();
@@ -21,6 +22,14 @@ router.post("/send", sendApplication);
  * Schedule job application emails for future sending.
  */
 router.post("/schedule", scheduleApplication);
+
+/**
+ * POST /api/applications/process-scheduled
+ * Manually trigger a pass over due scheduled_emails rows.
+ * For hosting setups where the in-process cron loop won't stay alive
+ * (e.g. serverless) — point an external cron at this endpoint instead.
+ */
+router.post("/process-scheduled", processScheduledEmails);
 
 router.get("/getAllApplications", getAllApplications);
 

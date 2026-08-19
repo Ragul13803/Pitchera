@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Image,
   Pressable,
   StyleSheet,
@@ -13,7 +12,7 @@ import api from '@/services/api';
 import { ApiError } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { Loading } from './ui/Loading';
-import Toast from 'react-native-toast-message';
+import Toast from "react-native-toast-message";
 
 interface GoogleLoginButtonProps {
   onLoading?: (loading: boolean) => void;
@@ -56,7 +55,7 @@ export default function GoogleLoginButton({
       handleSuccess(response.params.id_token);
     } else if (response.type === 'error') {
       console.error('❌ Google OAuth error:', response.error);
-      Alert.alert('Authentication Error', 'Google sign-in failed. Please try again.');
+      Toast.show({ type: 'error', text1: 'Authentication Error', text2: 'Google sign-in failed. Please try again.' });
     } else if (response.type === 'cancel') {
       console.log('ℹ️ Google sign-in cancelled by user');
     }
@@ -64,7 +63,7 @@ export default function GoogleLoginButton({
 
   const handleSuccess = async (idToken: string | undefined) => {
     if (!idToken) {
-      Alert.alert('Error', 'No ID token received from Google');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'No ID token received from Google' });
       return;
     }
 
@@ -116,7 +115,7 @@ export default function GoogleLoginButton({
         errorMessage = error.message;
       }
 
-      Alert.alert('Authentication Failed', errorMessage);
+      Toast.show({ type: 'error', text1: 'Authentication Failed', text2: errorMessage });
     } finally {
       setLoading(false);
       onLoading?.(false);
@@ -125,7 +124,7 @@ export default function GoogleLoginButton({
 
   const handlePress = async () => {
     if (!request) {
-      Alert.alert('Not Ready', 'Google Sign-In is not ready yet. Please wait.');
+      Toast.show({ type: 'error', text1: 'Not Ready', text2: 'Google Sign-In is not ready yet. Please wait.' });
       return;
     }
 
@@ -134,7 +133,7 @@ export default function GoogleLoginButton({
       await promptAsync();
     } catch (error) {
       console.error('Error starting Google auth:', error);
-      Alert.alert('Error', 'Failed to start Google Sign-In');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to start Google Sign-In' });
     }
   };
 

@@ -113,18 +113,115 @@ export async function sendEmailViaGmail(
     attachmentPaths
   );
 
-  const encodedMessage = Buffer.from(mimeMessage)
+  const response = await gmail.users.messages.send({
+    userId: "me",
+    requestBody: { raw: encodeBase64Url(mimeMessage) },
+  });
+
+  return response.data.id || "";
+}
+
+const SCHEDULED_LABEL_NAME = "App/Scheduled";
+
+/**
+ * Gmail's API has no "scheduled send" concept to write to — the client-only
+ * Scheduled tray isn't exposed via the API. Drafts + a label is the closest
+ * visible equivalent: the message appears under Gmail > Drafts (and under
+ * this label) immediately, then gets sent (and removed from Drafts) at the
+ * scheduled time.
+ */
+async function getOrCreateScheduledLabelId(gmail: ReturnType<typeof google.gmail>): Promise<string | null> {
+  try {
+    const { data } = await gmail.users.labels.list({ userId: "me" });
+    const existing = data.labels?.find((l) => l.name === SCHEDULED_LABEL_NAME);
+    if (existing?.id) return existing.id;
+
+    const { data: created } = await gmail.users.labels.create({
+      userId: "me",
+      requestBody: {
+        name: SCHEDULED_LABEL_NAME,
+        labelListVisibility: "labelShow",
+        messageListVisibility: "show",
+      },
+    });
+    return created.id || null;
+  } catch (error: any) {
+    console.error("[Gmail] Failed to get/create scheduled label:", error.message);
+    return null;
+  }
+}
+
+/**
+ * Create a Gmail draft for a scheduled email so the user sees it under
+ * Gmail > Drafts right away, rather than nothing until send time.
+ */
+export async function createDraftViaGmail(
+  userId: number,
+  to: string,
+  subject: string,
+  body: string,
+  attachmentPaths: string[] = []
+): Promise<string> {
+  const { client, account } = await getGmailClient(userId);
+  const gmail = google.gmail({ version: "v1", auth: client });
+
+  const mimeMessage = await buildMimeMessage(
+    account.gmail_address,
+    to,
+    subject,
+    body,
+    attachmentPaths
+  );
+
+  const response = await gmail.users.drafts.create({
+    userId: "me",
+    requestBody: { message: { raw: encodeBase64Url(mimeMessage) } },
+  });
+
+  const draftId = response.data.id;
+  if (!draftId) throw new Error("Gmail did not return a draft id");
+
+  const messageId = response.data.message?.id;
+  if (messageId) {
+    const labelId = await getOrCreateScheduledLabelId(gmail);
+    if (labelId) {
+      try {
+        await gmail.users.messages.modify({
+          userId: "me",
+          id: messageId,
+          requestBody: { addLabelIds: [labelId] },
+        });
+      } catch (error: any) {
+        console.error("[Gmail] Failed to label scheduled draft:", error.message);
+      }
+    }
+  }
+
+  return draftId;
+}
+
+/**
+ * Send a previously-created draft. Gmail sends the message and removes it
+ * from Drafts automatically — no separate delete step needed.
+ */
+export async function sendDraftViaGmail(userId: number, draftId: string): Promise<string> {
+  const { client } = await getGmailClient(userId);
+  const gmail = google.gmail({ version: "v1", auth: client });
+
+  const response = await gmail.users.drafts.send({
+    userId: "me",
+    requestBody: { id: draftId },
+  });
+
+  return response.data.id || "";
+}
+
+function encodeBase64Url(input: string): string {
+  return Buffer.from(input)
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
-
-  const response = await gmail.users.messages.send({
-    userId: "me",
-    requestBody: { raw: encodedMessage },
-  });
-
-  return response.data.id || "";
 }
 
 async function buildMimeMessage(

@@ -9,10 +9,11 @@ import {
   scheduleEmail,
   replaceTemplateVariables,
 } from "../services/email.service";
-import { getGmailClient } from "../services/gmail.service";
+import { getGmailClient, createDraftViaGmail } from "../services/gmail.service";
 import { sendSuccess, sendError } from "../utils/response";
 import path from "path";
 import { getSmartSalutation } from "../utils/email";
+import { processDueEmails } from "../jobs/emailScheduler";
 
 interface RecruiterInput {
   name?: string | null;
@@ -21,6 +22,8 @@ interface RecruiterInput {
 }
 
 interface SendPayload {
+  companyName: string;
+  applicationId?: number;
   recruiters: RecruiterInput[];
   emailBody: string;
   emailSubject: string;
@@ -51,7 +54,20 @@ function validateRecruiters(recruiters: RecruiterInput[]): string | null {
   return null;
 }
 
-async function buildTemplateVars(userId: number) {
+/** Resolves an existing job_applications row owned by this user, if an id was passed in. */
+async function resolveExistingApplication(
+  userId: number,
+  applicationId: number | undefined
+): Promise<number | null> {
+  if (!applicationId) return null;
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT id FROM job_applications WHERE id = ? AND user_id = ?`,
+    [applicationId, userId]
+  );
+  return rows.length > 0 ? rows[0].id : null;
+}
+
+async function buildTemplateVars(userId: number, companyName: string) {
   const [users] = await pool.query<RowDataPacket[]>(
     `SELECT u.first_name, u.last_name, u.email,
             p.phone, p.total_experience,
@@ -78,7 +94,7 @@ async function buildTemplateVars(userId: number) {
     linkedin: user.linkedin || "",
     github: user.github || "",
     portfolio: user.portfolio || "",
-    company: "Direct Outreach",
+    company: companyName,
     position: "",
     recruiterName: "",
   };
@@ -110,6 +126,9 @@ export async function sendApplication(
     const userId = req.user!.userId;
     const body: SendPayload = req.body;
 
+    const companyName = body.companyName?.trim();
+    if (!companyName) { sendError(res, "Company name is required.", 400); return; }
+
     const recruiterError = validateRecruiters(body.recruiters);
     if (recruiterError) { sendError(res, recruiterError, 400); return; }
 
@@ -125,16 +144,26 @@ export async function sendApplication(
       return;
     }
 
-    const templateVarsBase = await buildTemplateVars(userId);
+    const templateVarsBase = await buildTemplateVars(userId, companyName);
     const resumePath = await getPrimaryResumePath(userId);
     const firstPosition = body.recruiters[0].position.trim();
 
-    const [appResult] = await pool.query<ResultSetHeader>(
-      `INSERT INTO job_applications (user_id, company_name, job_title, status)
-       VALUES (?, ?, ?, 'applied')`,
-      [userId, "Direct Outreach", firstPosition]
-    );
-    const jobApplicationId = appResult.insertId;
+    const existingApplicationId = await resolveExistingApplication(userId, body.applicationId);
+    let jobApplicationId: number;
+    if (existingApplicationId) {
+      jobApplicationId = existingApplicationId;
+      await pool.query(
+        `UPDATE job_applications SET company_name = ?, job_title = ?, updated_at = NOW() WHERE id = ?`,
+        [companyName, firstPosition, jobApplicationId]
+      );
+    } else {
+      const [appResult] = await pool.query<ResultSetHeader>(
+        `INSERT INTO job_applications (user_id, company_name, job_title, status)
+         VALUES (?, ?, ?, 'applied')`,
+        [userId, companyName, firstPosition]
+      );
+      jobApplicationId = appResult.insertId;
+    }
 
     const results = await sendJobApplicationEmails({
       userId,
@@ -182,6 +211,9 @@ export async function scheduleApplication(
     const userId = req.user!.userId;
     const body: SchedulePayload = req.body;
 
+    const companyName = body.companyName?.trim();
+    if (!companyName) { sendError(res, "Company name is required.", 400); return; }
+
     const recruiterError = validateRecruiters(body.recruiters);
     if (recruiterError) { sendError(res, recruiterError, 400); return; }
 
@@ -205,16 +237,26 @@ export async function scheduleApplication(
       return;
     }
 
-    const templateVarsBase = await buildTemplateVars(userId);
+    const templateVarsBase = await buildTemplateVars(userId, companyName);
     const resumePath = await getPrimaryResumePath(userId);
     const firstPosition = body.recruiters[0].position.trim();
 
-    const [appResult] = await pool.query<ResultSetHeader>(
-      `INSERT INTO job_applications (user_id, company_name, job_title, status)
-       VALUES (?, ?, ?, 'scheduled')`,
-      [userId, "Direct Outreach", firstPosition]
-    );
-    const jobApplicationId = appResult.insertId;
+    const existingApplicationId = await resolveExistingApplication(userId, body.applicationId);
+    let jobApplicationId: number;
+    if (existingApplicationId) {
+      jobApplicationId = existingApplicationId;
+      await pool.query(
+        `UPDATE job_applications SET company_name = ?, job_title = ?, status = 'scheduled', updated_at = NOW() WHERE id = ?`,
+        [companyName, firstPosition, jobApplicationId]
+      );
+    } else {
+      const [appResult] = await pool.query<ResultSetHeader>(
+        `INSERT INTO job_applications (user_id, company_name, job_title, status)
+         VALUES (?, ?, ?, 'scheduled')`,
+        [userId, companyName, firstPosition]
+      );
+      jobApplicationId = appResult.insertId;
+    }
 
     const scheduledIds: number[] = [];
 
@@ -243,6 +285,28 @@ export async function scheduleApplication(
         scheduledAt,
       });
 
+      // Best-effort: create a Gmail draft so the user sees the email under
+      // Gmail > Drafts immediately. Never fails the schedule request itself —
+      // the cron worker still sends from the stored subject/body either way.
+      try {
+        const draftId = await createDraftViaGmail(
+          userId,
+          recruiter.email.trim().toLowerCase(),
+          personalizedSubject,
+          personalizedBody,
+          resumePath ? [resumePath] : []
+        );
+        await pool.query("UPDATE scheduled_emails SET gmail_draft_id = ? WHERE id = ?", [
+          draftId,
+          id,
+        ]);
+      } catch (draftError: any) {
+        console.error(
+          `[Schedule] Failed to create Gmail draft for scheduled email #${id}:`,
+          draftError.message
+        );
+      }
+
       scheduledIds.push(id);
     }
 
@@ -257,7 +321,38 @@ export async function scheduleApplication(
   }
 }
 
-//getAllApplications
+// ─── Manual scheduler trigger ──────────────────────────────────────────────
+// Lets an external cron (e.g. on serverless hosts where the in-process
+// setInterval/node-cron loop won't survive between invocations) kick the
+// scheduled-email queue on demand.
+
+export async function processScheduledEmails(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const result = await processDueEmails();
+    sendSuccess(res, result, "Scheduled email queue processed.");
+  } catch (error) {
+    next(error);
+  }
+}
+
+interface RecipientRow extends RowDataPacket {
+  job_application_id: number;
+  recipient_name: string | null;
+  recipient_email: string;
+  status: string;
+  sent_at: Date | null;
+  scheduled_at: Date | null;
+  error_message: string | null;
+  created_at: Date;
+}
+
+// getAllApplications — returns each application plus a rollup of its
+// recipients/status details so the Applications list can render everything
+// (who it went to, when it's due, why it failed) from one call.
 export async function getAllApplications(
   req: AuthRequest,
   res: Response,
@@ -284,35 +379,82 @@ export async function getAllApplications(
     }
 
     let query = `
-      SELECT
-        id,
-        user_id,
-        company_name,
-        job_title,
-        job_url,
-        job_description,
-        status,
-        applied_at,
-        created_at,
-        updated_at
+      SELECT id, company_name, job_title, job_url, status, applied_at, created_at, updated_at
       FROM job_applications
       WHERE user_id = ?
     `;
-
     const params: any[] = [userId];
-
     if (status) {
       query += ` AND status = ?`;
       params.push(status);
     }
-
     query += ` ORDER BY created_at DESC`;
 
-    const [applications] = await pool.query(query, params);
+    const [applications] = await pool.query<RowDataPacket[]>(query, params);
+
+    const [recipientRows] = await pool.query<RecipientRow[]>(
+      `SELECT job_application_id, recipient_name, recipient_email, status,
+              sent_at, NULL AS scheduled_at, error_message, created_at
+       FROM email_logs
+       WHERE user_id = ? AND job_application_id IS NOT NULL
+       UNION ALL
+       SELECT job_application_id, recipient_name, recipient_email, status,
+              sent_at, scheduled_at, error_message, created_at
+       FROM scheduled_emails
+       WHERE user_id = ? AND job_application_id IS NOT NULL`,
+      [userId, userId]
+    );
+
+    const recipientsByApp = new Map<number, RecipientRow[]>();
+    for (const row of recipientRows) {
+      const list = recipientsByApp.get(row.job_application_id) ?? [];
+      list.push(row);
+      recipientsByApp.set(row.job_application_id, list);
+    }
+
+    const enriched = applications.map((app) => {
+      const recipients = (recipientsByApp.get(app.id) ?? []).sort(
+        (a, b) => a.created_at.getTime() - b.created_at.getTime()
+      );
+
+      const nextScheduledAt = recipients
+        .filter((r) => r.status === "scheduled" && r.scheduled_at)
+        .map((r) => r.scheduled_at as Date)
+        .sort((a, b) => a.getTime() - b.getTime())[0];
+
+      const lastSentAt = recipients
+        .filter((r) => r.status === "sent" && r.sent_at)
+        .map((r) => r.sent_at as Date)
+        .sort((a, b) => b.getTime() - a.getTime())[0];
+
+      const lastError = [...recipients]
+        .reverse()
+        .find((r) => r.status === "failed" && r.error_message)?.error_message;
+
+      return {
+        id: app.id,
+        companyName: app.company_name,
+        jobTitle: app.job_title,
+        jobUrl: app.job_url,
+        status: app.status,
+        appliedAt: app.applied_at,
+        createdAt: app.created_at,
+        updatedAt: app.updated_at,
+        recipients: recipients.map((r) => ({
+          name: r.recipient_name,
+          email: r.recipient_email,
+          status: r.status,
+        })),
+        recipientCount: recipients.length,
+        scheduledAt: nextScheduledAt ?? null,
+        sentAt: lastSentAt ?? null,
+        errorMessage: lastError ?? null,
+      };
+    });
 
     sendSuccess(
       res,
-      applications,
+      enriched,
       status
         ? `Applications with status '${status}' fetched successfully.`
         : "All applications fetched successfully."

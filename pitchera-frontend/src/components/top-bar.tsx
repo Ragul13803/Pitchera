@@ -11,6 +11,7 @@ import {
 
 import { Avatar } from './ui/Avatar';
 import { useDeviceType } from '@/hooks/useDeviceType';
+import { useTheme } from '@/context/ThemeContext';
 
 type User = {
   id: number;
@@ -39,6 +40,7 @@ function getTitle(pathname: string) {
 
 export function TopBar() {
   const pathname = usePathname();
+  const { colors } = useTheme();
 
   const [user, setUser] = useState<User | null>(null);
 
@@ -82,6 +84,7 @@ export function TopBar() {
     <View
       style={[
         styles.container,
+        { backgroundColor: colors.card, borderColor: colors.border },
         isMobile && styles.mobileContainer,
         isTablet && styles.tabletContainer,
         isDesktop && styles.desktopContainer,
@@ -91,6 +94,7 @@ export function TopBar() {
       <Text
         style={[
           styles.title,
+          { color: colors.text },
           isMobile && styles.mobileTitle,
         ]}
         numberOfLines={1}
@@ -109,13 +113,14 @@ export function TopBar() {
         <Pressable
           style={[
             styles.iconButton,
+            { backgroundColor: colors.background },
             isMobile && styles.mobileIconButton,
           ]}
         >
           <Ionicons
             name="notifications-outline"
             size={isMobile ? 19 : 21}
-            color="#475569"
+            color={colors.textSecondary}
           />
         </Pressable>
 
@@ -131,6 +136,7 @@ export function TopBar() {
           <View
   style={[
     styles.avatar,
+    { backgroundColor: colors.primary + '20' },
     isMobile && styles.mobileAvatar,
   ]}
 >
@@ -143,7 +149,7 @@ export function TopBar() {
     <Ionicons
       name="person"
       size={isMobile ? 19 : 21}
-      color="#2563EB"
+      color={colors.primary}
     />
   )}
 </View>
@@ -152,14 +158,14 @@ export function TopBar() {
           {!isMobile && (
             <View style={styles.userInfo}>
               <Text
-                style={styles.name}
+                style={[styles.name, { color: colors.text }]}
                 numberOfLines={1}
               >
                 {fullName}
               </Text>
 
               <Text
-                style={styles.role}
+                style={[styles.role, { color: colors.textSecondary }]}
                 numberOfLines={1}
               >
                 {user?.email ?? ''}
@@ -178,10 +184,7 @@ const styles = StyleSheet.create({
 
     paddingHorizontal: 28,
 
-    backgroundColor: '#FFFFFF',
-
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 10,
 
     marginVertical: 10,
@@ -215,7 +218,6 @@ const styles = StyleSheet.create({
 
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
   },
 
   mobileTitle: {
@@ -237,8 +239,6 @@ const styles = StyleSheet.create({
     height: 40,
 
     borderRadius: 20,
-
-    backgroundColor: '#F8FAFC',
 
     alignItems: 'center',
     justifyContent: 'center',
@@ -268,8 +268,6 @@ const styles = StyleSheet.create({
 
     borderRadius: 20,
 
-    backgroundColor: '#DBEAFE',
-
     alignItems: 'center',
     justifyContent: 'center',
 
@@ -292,7 +290,6 @@ const styles = StyleSheet.create({
 
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
   },
 
   role: {
@@ -301,6 +298,5 @@ const styles = StyleSheet.create({
     marginTop: 2,
 
     fontSize: 11,
-    color: '#94A3B8',
   },
 });

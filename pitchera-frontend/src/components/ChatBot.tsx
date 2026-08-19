@@ -1,15 +1,16 @@
 import React, { FC, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
   Platform,
   StyleSheet,
   View,
-  // useSafeAreaInsets,
   useWindowDimensions,
 } from 'react-native';
 
 import ChatWindow from './ChatWindow';
 import ChatToggle from './ChatToggle';
+import { useAuth } from '@/context/AuthContext';
 
 interface Props {}
 
@@ -20,27 +21,22 @@ const COLORS = {
 
 const ChatBot: FC<Props> = () => {
   const { width, height } = useWindowDimensions();
-  // const insets = useSafeAreaInsets();
 
   const [isOpen, setIsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
-  const slideAnim = useRef(
-    new Animated.Value(0),
-  ).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
   const isMobile = width <= 480;
-  const isTablet =
-    width > 480 && width <= 900;
+  const isTablet = width > 480 && width <= 900;
 
   useEffect(() => {
     Animated.spring(slideAnim, {
       toValue: isOpen ? 1 : 0,
       useNativeDriver: true,
-
-      damping: 18,
-      stiffness: 180,
-      mass: 0.8,
+      damping: 20,
+      stiffness: 190,
+      mass: 0.75,
     }).start();
 
     if (isOpen) {
@@ -49,76 +45,73 @@ const ChatBot: FC<Props> = () => {
   }, [isOpen, slideAnim]);
 
   const desktopChatWidth = isTablet
-    ? Math.min(390, width - 32)
-    : Math.min(420, width - 48);
+    ? Math.min(400, width - 28)
+    : Math.min(450, width - 42);
 
   const desktopChatHeight = isTablet
-    ? Math.min(600, height - 90)
-    : Math.min(650, height - 100);
+    ? Math.min(600, height - 72)
+    : Math.min(640, height - 82);
 
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [22, 0],
+    outputRange: [30, 0],
   });
 
   const scale = slideAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.96, 1],
+    outputRange: [0.94, 1],
   });
 
   const opacity = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
+    inputRange: [0, 0.35, 1],
+    outputRange: [0, 0.5, 1],
   });
 
   const toggleBottom = isMobile
-    ? 80
+    ? Platform.OS === 'web'
+      ? 18
+      : 20
     : 20;
 
+    const { user } = useAuth();
+
   return (
-    <View
-      pointerEvents="box-none"
-      style={styles.root}
-    >
-      {/* CHAT WINDOW */}
-      {isOpen && (
-        <Animated.View
-          style={[
-            styles.chatContainer,
+    <View pointerEvents="box-none" style={styles.root}>
+      {/* =====================================================
+          CHAT WINDOW
+      ===================================================== */}
 
-            isMobile
-              ? [
-                  styles.mobileChat,
-                  {
-                    width,
-                    height:
-                      height +
-                      (Platform.OS === 'ios'
-                        ? 20
-                        : 10),
-                  },
-                ]
-              : {
-                  width: desktopChatWidth,
-                  height: desktopChatHeight,
+      <Animated.View
+        pointerEvents={isOpen ? 'auto' : 'none'}
+        style={[
+          styles.chatContainer,
+
+          isMobile
+            ? [
+                styles.mobileChat,
+                {
+                  width,
+                  height,
                 },
+              ]
+            : {
+                width: desktopChatWidth,
+                height: desktopChatHeight,
+              },
 
-            {
-              opacity,
-              transform: [
-                { translateY },
-                { scale },
-              ],
-            },
-          ]}
-        >
-          <ChatWindow
-            onClose={() => setIsOpen(false)}
-          />
-        </Animated.View>
-      )}
+          {
+            opacity,
+            transform: [{ translateY }, { scale }],
+          },
+        ]}
+      >
+        <ChatWindow onClose={() => setIsOpen(false)} />
+      </Animated.View>
 
-      {/* FLOATING TOGGLE */}
+      {/* =====================================================
+          FLOATING TOGGLE
+      ===================================================== */}
+
       <View
         pointerEvents="box-none"
         style={[
@@ -131,9 +124,7 @@ const ChatBot: FC<Props> = () => {
         <ChatToggle
           isOpen={isOpen}
           unread={unread}
-          onPress={() =>
-            setIsOpen((prev) => !prev)
-          }
+          onPress={() => setIsOpen(prev => !prev)}
         />
       </View>
     </View>
@@ -152,24 +143,27 @@ const styles = StyleSheet.create({
   chatContainer: {
     position: 'absolute',
 
-    right: 24,
+    right: 20,
     bottom: 94,
 
     backgroundColor: COLORS.white,
 
-    borderRadius: 24,
+    borderRadius: 26,
 
     overflow: 'hidden',
 
-    shadowColor: '#20234A',
+    shadowColor: '#171A3D',
     shadowOffset: {
       width: 0,
-      height: 14,
+      height: 18,
     },
-    shadowOpacity: 0.22,
-    shadowRadius: 28,
+    shadowOpacity: 0.25,
+    shadowRadius: 35,
 
-    elevation: 18,
+    elevation: 22,
+
+    borderWidth: Platform.OS === 'web' ? 1 : 0,
+    borderColor: '#E4E6F5',
   },
 
   mobileChat: {
@@ -179,6 +173,8 @@ const styles = StyleSheet.create({
 
     borderRadius: 0,
 
+    borderWidth: 0,
+
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -186,10 +182,12 @@ const styles = StyleSheet.create({
   toggleContainer: {
     position: 'absolute',
 
-    right: 16,
+    right: 14,
 
     alignItems: 'center',
     justifyContent: 'center',
+
+    zIndex: 100000,
   },
 });
 

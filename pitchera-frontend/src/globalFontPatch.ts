@@ -1,7 +1,6 @@
 import { Text, TextInput } from "react-native";
 
-const FONT_REGULAR = "CormorantGaramond_400Regular";
-const DEFAULT_FONT_SIZE = 48;
+const FONT_REGULAR = "Alkatra_400Regular";
 
 let patched = false;
 
@@ -24,7 +23,6 @@ export function applyGlobalFontPatch() {
         style: [
           {
             fontFamily: FONT_REGULAR,
-            fontSize: DEFAULT_FONT_SIZE,
           },
           ...style,
         ],
@@ -44,7 +42,6 @@ export function applyGlobalFontPatch() {
         style: [
           {
             fontFamily: FONT_REGULAR,
-            fontSize: DEFAULT_FONT_SIZE,
           },
           ...style,
         ],

@@ -9,6 +9,7 @@ import Chatbot from '@/components/ChatBot'
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
 import { MobileTabs } from "./mobile-tabs";
+import { useTheme } from "@/context/ThemeContext";
 
 type AppShellProps = {
   children: ReactNode;
@@ -16,11 +17,12 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   const { width } = useWindowDimensions();
+  const { colors } = useTheme();
 
   const isDesktop = width >= 900;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
         {isDesktop && <Sidebar />}
 
@@ -28,7 +30,12 @@ export function AppShell({ children }: AppShellProps) {
           <TopBar />
 
           {/* Content Card */}
-          <View style={styles.content}>
+          <View
+            style={[
+              styles.content,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
             {children}
           </View>
         </View>
@@ -45,7 +52,6 @@ export function AppShell({ children }: AppShellProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
   },
 
   container: {
@@ -66,10 +72,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
     marginBottom: 10,
 
-    backgroundColor: "#FFFFFF",
-
     borderWidth: 1,
-    borderColor: "#E5E7EB",
 
     borderRadius: 10,
 

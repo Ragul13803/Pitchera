@@ -38,7 +38,10 @@ export function getGmailAuthUrl(userId: number): string {
   const url = oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: [
-      "https://www.googleapis.com/auth/gmail.send",
+      // gmail.send alone can't create/send drafts (needed for draft-based
+      // scheduling) or modify message labels — gmail.compose covers both
+      // draft CRUD and sending without granting broader mailbox-modify access.
+      "https://www.googleapis.com/auth/gmail.compose",
       "https://www.googleapis.com/auth/userinfo.email",
     ],
     state: String(userId),

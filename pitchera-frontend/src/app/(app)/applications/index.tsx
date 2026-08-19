@@ -1,5 +1,11 @@
 // src/app/(app)/applications.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
+
 import {
   View,
   Text,
@@ -11,122 +17,393 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
 import api from '@/services/api';
 import { useTheme } from '@/context/ThemeContext';
 
-// ─── Types (matching DB schema) ───────────────────────────────────────────────
+import type {
+  AppStatus,
+  JobApplication,
+} from '@/types';
 
-type AppStatus =
-  | 'draft'
-  | 'scheduled'
-  | 'sent'
-  | 'failed'
-  | 'interview'
-  | 'rejected'
-  | 'selected'
-  | 'offer';
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS CONFIG
+// ─────────────────────────────────────────────────────────────────────────────
 
-interface EmailLog {
-  id: number;
-  recipient_name: string;
-  recipient_email: string;
-  subject: string;
-  status: 'pending' | 'sending' | 'sent' | 'failed' | 'cancelled';
-  sent_at: string | null;
-}
+const STATUS: Record<
+  AppStatus,
+  {
+    label: string;
+    color: string;
+    bg: string;
+    icon: string;
+  }
+> = {
+  draft: {
+    label: 'Draft',
+    color: '#6B7280',
+    bg: '#F3F4F6',
+    icon: 'document-outline',
+  },
 
-interface JobApplication {
-  id: number;
-  company_name: string;
-  job_title: string;
-  job_url: string | null;
-  status: AppStatus;
-  applied_at: string | null;
-  created_at: string;
-  email_logs?: EmailLog[];
-  recruiter_count?: number;
-  emails_sent?: number;
-}
+  scheduled: {
+    label: 'Scheduled',
+    color: '#D97706',
+    bg: '#FEF3C7',
+    icon: 'time-outline',
+  },
 
-// ─── Status Config ────────────────────────────────────────────────────────────
+  sent: {
+    label: 'Sent',
+    color: '#2563EB',
+    bg: '#DBEAFE',
+    icon: 'mail-outline',
+  },
 
-const STATUS: Record<AppStatus, { label: string; color: string; bg: string; icon: string }> = {
-  draft:     { label: 'Draft',     color: '#6B7280', bg: '#F3F4F6', icon: 'document-outline' },
-  scheduled: { label: 'Scheduled', color: '#D97706', bg: '#FEF3C7', icon: 'time-outline' },
-  sent:      { label: 'Sent',      color: '#2563EB', bg: '#DBEAFE', icon: 'mail-outline' },
-  failed:    { label: 'Failed',    color: '#DC2626', bg: '#FEE2E2', icon: 'alert-circle-outline' },
-  interview: { label: 'Interview', color: '#7C3AED', bg: '#EDE9FE', icon: 'people-outline' },
-  rejected:  { label: 'Rejected',  color: '#9CA3AF', bg: '#F9FAFB', icon: 'close-circle-outline' },
-  selected:  { label: 'Selected',  color: '#059669', bg: '#D1FAE5', icon: 'checkmark-circle-outline' },
-  offer:     { label: 'Offer',     color: '#065F46', bg: '#A7F3D0', icon: 'trophy-outline' },
+  failed: {
+    label: 'Failed',
+    color: '#DC2626',
+    bg: '#FEE2E2',
+    icon: 'alert-circle-outline',
+  },
+
+  interview: {
+    label: 'Interview',
+    color: '#7C3AED',
+    bg: '#EDE9FE',
+    icon: 'people-outline',
+  },
+
+  rejected: {
+    label: 'Rejected',
+    color: '#9CA3AF',
+    bg: '#F9FAFB',
+    icon: 'close-circle-outline',
+  },
+
+  selected: {
+    label: 'Selected',
+    color: '#059669',
+    bg: '#D1FAE5',
+    icon: 'checkmark-circle-outline',
+  },
+
+  offer: {
+    label: 'Offer',
+    color: '#065F46',
+    bg: '#A7F3D0',
+    icon: 'trophy-outline',
+  },
 };
 
-const ALL_STATUSES = Object.keys(STATUS) as AppStatus[];
+const ALL_STATUSES =
+  Object.keys(STATUS) as AppStatus[];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
 
-function fmtDate(iso: string | null): string {
+function fmtDate(
+  iso: string | null
+): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  });
+
+  return new Date(iso).toLocaleDateString(
+    'en-US',
+    {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }
+  );
 }
 
-function getInitial(name: string): string {
-  return name?.trim()?.charAt(0)?.toUpperCase() ?? '?';
+function fmtDateTime(
+  iso: string | null
+): string {
+  if (!iso) return '—';
+
+  return new Date(iso).toLocaleString(
+    'en-US',
+    {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }
+  );
 }
 
-// Deterministic color from company name
-const AVATAR_COLORS = ['#6366F1','#0EA5E9','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899'];
-function avatarColor(name: string): string {
+function getInitial(
+  name: string
+): string {
+  return (
+    name
+      ?.trim()
+      ?.charAt(0)
+      ?.toUpperCase() ?? '?'
+  );
+}
+
+const AVATAR_COLORS = [
+  '#6366F1',
+  '#0EA5E9',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
+];
+
+function avatarColor(
+  name: string
+): string {
   let h = 0;
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+
+  for (
+    let i = 0;
+    i < name.length;
+    i++
+  ) {
+    h =
+      name.charCodeAt(i) +
+      ((h << 5) - h);
+  }
+
+  return AVATAR_COLORS[
+    Math.abs(h) %
+      AVATAR_COLORS.length
+  ];
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS BADGE
+// ─────────────────────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: AppStatus }) {
-  const s = STATUS[status] ?? STATUS.draft;
+function StatusBadge({
+  status,
+}: {
+  status: AppStatus;
+}) {
+  const item =
+    STATUS[status] ?? STATUS.draft;
+
   return (
-    <View style={[sb.wrap, { backgroundColor: s.bg }]}>
-      <Ionicons name={s.icon as any} size={11} color={s.color} />
-      <Text style={[sb.text, { color: s.color }]}>{s.label}</Text>
+    <View
+      style={[
+        sb.wrap,
+        {
+          backgroundColor:
+            item.bg,
+        },
+      ]}
+    >
+      <Ionicons
+        name={item.icon as any}
+        size={11}
+        color={item.color}
+      />
+
+      <Text
+        style={[
+          sb.text,
+          {
+            color: item.color,
+          },
+        ]}
+      >
+        {item.label}
+      </Text>
     </View>
   );
 }
+
 const sb = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
-  text: { fontSize: 11, fontWeight: '700' },
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+
+  text: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// SKELETON
+// ─────────────────────────────────────────────────────────────────────────────
 
-function Skeleton({ colors }: { colors: any }) {
+function Skeleton({
+  colors,
+}: {
+  colors: any;
+}) {
   return (
-    <View style={{ padding: 16, gap: 12 }}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <View key={i} style={[sk.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[sk.circle, { backgroundColor: colors.border }]} />
-          <View style={{ flex: 1, gap: 8 }}>
-            <View style={[sk.line, { width: '60%', backgroundColor: colors.border }]} />
-            <View style={[sk.line, { width: '40%', backgroundColor: colors.border }]} />
-            <View style={[sk.line, { width: '30%', backgroundColor: colors.border }]} />
+    <View
+      style={{
+        padding: 16,
+        gap: 12,
+      }}
+    >
+      {[1, 2, 3, 4, 5].map(
+        i => (
+          <View
+            key={i}
+            style={[
+              sk.card,
+              {
+                backgroundColor:
+                  colors.card,
+                borderColor:
+                  colors.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                sk.circle,
+                {
+                  backgroundColor:
+                    colors.border,
+                },
+              ]}
+            />
+
+            <View
+              style={{
+                flex: 1,
+                gap: 8,
+              }}
+            >
+              <View
+                style={[
+                  sk.line,
+                  {
+                    width: '60%',
+                    backgroundColor:
+                      colors.border,
+                  },
+                ]}
+              />
+
+              <View
+                style={[
+                  sk.line,
+                  {
+                    width: '40%',
+                    backgroundColor:
+                      colors.border,
+                  },
+                ]}
+              />
+
+              <View
+                style={[
+                  sk.line,
+                  {
+                    width: '30%',
+                    backgroundColor:
+                      colors.border,
+                  },
+                ]}
+              />
+            </View>
           </View>
-        </View>
-      ))}
+        )
+      )}
     </View>
   );
 }
+
 const sk = StyleSheet.create({
-  card: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: 12, borderWidth: 1 },
-  circle: { width: 44, height: 44, borderRadius: 22 },
-  line: { height: 12, borderRadius: 6 },
+  card: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+
+  circle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+
+  line: {
+    height: 12,
+    borderRadius: 6,
+  },
 });
 
-// ─── Application Card ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// APPLICATION DETAIL
+// ─────────────────────────────────────────────────────────────────────────────
+
+function relevantDetail(
+  item: JobApplication
+): {
+  icon: string;
+  text: string;
+  color?: string;
+} {
+  if (
+    item.status === 'scheduled' &&
+    item.scheduledAt
+  ) {
+    return {
+      icon: 'time-outline',
+      text: `Scheduled ${fmtDateTime(
+        item.scheduledAt
+      )}`,
+      color: '#D97706',
+    };
+  }
+
+  if (
+    item.status === 'sent' &&
+    item.sentAt
+  ) {
+    return {
+      icon: 'checkmark-done-outline',
+      text: `Sent ${fmtDateTime(
+        item.sentAt
+      )}`,
+      color: '#2563EB',
+    };
+  }
+
+  if (
+    item.status === 'failed' &&
+    item.errorMessage
+  ) {
+    return {
+      icon: 'alert-circle-outline',
+      text: item.errorMessage,
+      color: '#DC2626',
+    };
+  }
+
+  return {
+    icon: 'calendar-outline',
+    text: fmtDate(
+      item.appliedAt ||
+        item.createdAt
+    ),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APPLICATION CARD
+// ─────────────────────────────────────────────────────────────────────────────
 
 function AppCard({
   item,
@@ -139,62 +416,186 @@ function AppCard({
   onPress: () => void;
   onSendEmail: () => void;
 }) {
-  const bg = avatarColor(item.company_name);
-  const date = item.applied_at || item.created_at;
-  const emailsSent = item.emails_sent ?? 0;
-  const canSend = item.status !== 'sent' && item.status !== 'selected' && item.status !== 'offer';
+  const bg = avatarColor(
+    item.companyName
+  );
+
+  const canSend =
+    item.status !== 'sent' &&
+    item.status !== 'selected' &&
+    item.status !== 'offer';
+
+  const detail =
+    relevantDetail(item);
+
+  const primaryRecipient =
+    item.recipients[0];
 
   return (
     <TouchableOpacity
-      style={[card.wrap, { backgroundColor: colors.card, borderColor: colors.border }]}
+      style={[
+        card.wrap,
+        {
+          backgroundColor:
+            colors.card,
+          borderColor:
+            colors.border,
+        },
+      ]}
       onPress={onPress}
       activeOpacity={0.75}
     >
-      {/* Top Row */}
       <View style={card.topRow}>
-        <View style={[card.avatar, { backgroundColor: bg }]}>
-          <Text style={card.avatarText}>{getInitial(item.company_name)}</Text>
+        <View
+          style={[
+            card.avatar,
+            {
+              backgroundColor:
+                bg,
+            },
+          ]}
+        >
+          <Text
+            style={
+              card.avatarText
+            }
+          >
+            {getInitial(
+              item.companyName
+            )}
+          </Text>
         </View>
 
         <View style={card.info}>
-          <Text style={[card.company, { color: colors.text }]} numberOfLines={1}>
-            {item.company_name}
+          <Text
+            style={[
+              card.company,
+              {
+                color:
+                  colors.text,
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {item.companyName}
           </Text>
-          <Text style={[card.role, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.job_title}
+
+          <Text
+            style={[
+              card.role,
+              {
+                color:
+                  colors.textSecondary,
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {item.jobTitle}
           </Text>
         </View>
 
-        <StatusBadge status={item.status} />
+        <StatusBadge
+          status={item.status}
+        />
       </View>
 
-      {/* Divider */}
-      <View style={[card.divider, { backgroundColor: colors.border }]} />
+      {primaryRecipient && (
+        <Text
+          style={[
+            card.recipient,
+            {
+              color:
+                colors.textSecondary,
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {primaryRecipient.name ||
+            primaryRecipient.email}
 
-      {/* Bottom Row */}
-      <View style={card.bottomRow}>
-        <View style={card.metaGroup}>
-          <View style={card.meta}>
-            <Ionicons name="calendar-outline" size={12} color={colors.textSecondary} />
-            <Text style={[card.metaText, { color: colors.textSecondary }]}>{fmtDate(date)}</Text>
-          </View>
-          <View style={card.meta}>
-            <Ionicons name="mail-outline" size={12} color={emailsSent > 0 ? '#2563EB' : colors.textSecondary} />
-            <Text style={[card.metaText, { color: emailsSent > 0 ? '#2563EB' : colors.textSecondary }]}>
-              {emailsSent} email{emailsSent !== 1 ? 's' : ''} sent
-            </Text>
-          </View>
+          {item.recipientCount >
+          1
+            ? ` + ${
+                item.recipientCount -
+                1
+              } more`
+            : ''}
+        </Text>
+      )}
+
+      <View
+        style={[
+          card.divider,
+          {
+            backgroundColor:
+              colors.border,
+          },
+        ]}
+      />
+
+      <View
+        style={card.bottomRow}
+      >
+        <View style={card.meta}>
+          <Ionicons
+            name={
+              detail.icon as any
+            }
+            size={12}
+            color={
+              detail.color ??
+              colors.textSecondary
+            }
+          />
+
+          <Text
+            style={[
+              card.metaText,
+              {
+                color:
+                  detail.color ??
+                  colors.textSecondary,
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {detail.text}
+          </Text>
         </View>
 
-        {/* Send Email Button */}
         {canSend && (
           <TouchableOpacity
-            style={[card.sendBtn, { backgroundColor: colors.primary }]}
-            onPress={(e) => { e.stopPropagation?.(); onSendEmail(); }}
+            style={[
+              card.sendBtn,
+              {
+                backgroundColor:
+                  colors.primary,
+              },
+            ]}
+            onPress={e => {
+              e.stopPropagation?.();
+
+              console.log(
+                '📧 SEND MAIL CLICKED'
+              );
+
+              onSendEmail();
+            }}
             activeOpacity={0.8}
           >
-            <Ionicons name="send-outline" size={13} color="#fff" />
-            <Text style={card.sendBtnText}>Send Mail</Text>
+            <Ionicons
+              name="send-outline"
+              size={13}
+              color="#fff"
+            />
+
+            <Text
+              style={
+                card.sendBtnText
+              }
+            >
+              Send Mail
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -208,23 +609,93 @@ const card = StyleSheet.create({
     borderWidth: 1,
     padding: 14,
     marginHorizontal: 16,
+
     ...Platform.select({
-      ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8 },
-      android: { elevation: 2 },
-      web:     { boxShadow: '0 2px 8px rgba(0,0,0,0.07)' } as any,
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {
+          width: 0,
+          height: 2,
+        },
+        shadowOpacity: 0.07,
+        shadowRadius: 8,
+      },
+
+      android: {
+        elevation: 2,
+      },
+
+      web: {
+        boxShadow:
+          '0 2px 8px rgba(0,0,0,0.07)',
+      } as any,
     }),
   },
-  topRow:     { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar:     { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontSize: 18, fontWeight: '800' },
-  info:       { flex: 1 },
-  company:    { fontSize: 15, fontWeight: '700' },
-  role:       { fontSize: 13, marginTop: 2 },
-  divider:    { height: 1, marginVertical: 12 },
-  bottomRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  metaGroup:  { gap: 4 },
-  meta:       { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaText:   { fontSize: 12 },
+
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  avatarText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+
+  info: {
+    flex: 1,
+  },
+
+  company: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  role: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+
+  recipient: {
+    fontSize: 12,
+    marginTop: 8,
+  },
+
+  divider: {
+    height: 1,
+    marginVertical: 12,
+  },
+
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent:
+      'space-between',
+    gap: 10,
+  },
+
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flex: 1,
+  },
+
+  metaText: {
+    fontSize: 12,
+    flexShrink: 1,
+  },
+
   sendBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,283 +704,1325 @@ const card = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 8,
   },
-  sendBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+
+  sendBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });
 
-// ─── Filter Pill ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// PILL
+// ─────────────────────────────────────────────────────────────────────────────
 
 function Pill({
-  label, active, color, bg, onPress, colors,
-}: { label: string; active: boolean; color: string; bg: string; onPress: () => void; colors: any }) {
+  label,
+  active,
+  color,
+  bg,
+  onPress,
+  colors,
+}: {
+  label: string;
+  active: boolean;
+  color: string;
+  bg: string;
+  onPress: () => void;
+  colors: any;
+}) {
   return (
     <TouchableOpacity
-      style={[pill.wrap, {
-        backgroundColor: active ? bg : colors.card,
-        borderColor: active ? color : colors.border,
-      }]}
+      style={[
+        pill.wrap,
+        {
+          backgroundColor:
+            active
+              ? bg
+              : colors.card,
+
+          borderColor:
+            active
+              ? color
+              : colors.border,
+        },
+      ]}
       onPress={onPress}
     >
-      <Text style={[pill.text, { color: active ? color : colors.textSecondary }]}>{label}</Text>
+      <Text
+        style={[
+          pill.text,
+          {
+            color:
+              active
+                ? color
+                : colors.textSecondary,
+          },
+        ]}
+      >
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
+
 const pill = StyleSheet.create({
-  wrap: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  text: { fontSize: 12, fontWeight: '600' },
+  wrap: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+
+  text: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// EMPTY STATE
+// ─────────────────────────────────────────────────────────────────────────────
 
-function Empty({ colors, onAdd }: { colors: any; onAdd: () => void }) {
+function Empty({
+  colors,
+  onAdd,
+}: {
+  colors: any;
+  onAdd: () => void;
+}) {
   return (
     <View style={em.wrap}>
-      <View style={[em.iconWrap, { backgroundColor: colors.card }]}>
-        <Ionicons name="mail-outline" size={52} color={colors.primary} />
+      <View
+        style={[
+          em.iconWrap,
+          {
+            backgroundColor:
+              colors.card,
+          },
+        ]}
+      >
+        <Ionicons
+          name="mail-outline"
+          size={52}
+          color={colors.primary}
+        />
       </View>
-      <Text style={[em.title, { color: colors.text }]}>No Applications Yet</Text>
-      <Text style={[em.sub, { color: colors.textSecondary }]}>
-        Start sending cold emails to recruiters and track every application here.
+
+      <Text
+        style={[
+          em.title,
+          {
+            color:
+              colors.text,
+          },
+        ]}
+      >
+        No Applications Yet
       </Text>
-      <TouchableOpacity style={[em.btn, { backgroundColor: colors.primary }]} onPress={onAdd}>
-        <Ionicons name="add" size={18} color="#fff" />
-        <Text style={em.btnText}>New Application</Text>
+
+      <Text
+        style={[
+          em.sub,
+          {
+            color:
+              colors.textSecondary,
+          },
+        ]}
+      >
+        Start sending cold emails
+        to recruiters and track
+        every application here.
+      </Text>
+
+      <TouchableOpacity
+        style={[
+          em.btn,
+          {
+            backgroundColor:
+              colors.primary,
+          },
+        ]}
+        onPress={() => {
+          console.log(
+            '🔥 EMPTY NEW APPLICATION CLICKED'
+          );
+
+          onAdd();
+        }}
+      >
+        <Ionicons
+          name="add"
+          size={18}
+          color="#fff"
+        />
+
+        <Text
+          style={em.btnText}
+        >
+          New Application
+        </Text>
       </TouchableOpacity>
     </View>
   );
 }
+
 const em = StyleSheet.create({
-  wrap:     { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  iconWrap: { width: 100, height: 100, borderRadius: 50, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  title:    { fontSize: 20, fontWeight: '800', marginBottom: 10, textAlign: 'center' },
-  sub:      { fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 28 },
-  btn:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24, paddingVertical: 13, borderRadius: 12 },
-  btnText:  { color: '#fff', fontSize: 15, fontWeight: '700' },
+  wrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+
+  iconWrap: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+
+  title: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+
+  sub: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 13,
+    borderRadius: 12,
+  },
+
+  btnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ApplicationScreen() {
-  const router = useRouter();
-  const { colors } = useTheme();
+  const router =
+    useRouter();
 
-  const [applications, setApplications] = useState<JobApplication[]>([]);
-  const [filtered, setFiltered]         = useState<JobApplication[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [refreshing, setRefreshing]     = useState(false);
-  const [error, setError]               = useState<string | null>(null);
-  const [search, setSearch]             = useState('');
-  const [activeStatus, setActiveStatus] = useState<AppStatus | 'all'>('all');
-  const [sort, setSort]                 = useState<'newest' | 'oldest'>('newest');
+  const { colors } =
+    useTheme();
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const [
+    applications,
+    setApplications,
+  ] = useState<
+    JobApplication[]
+  >([]);
 
-  const fetch = useCallback(async (isRefresh = false) => {
-    try {
-      isRefresh ? setRefreshing(true) : setLoading(true);
-      setError(null);
-      const res: any  = await api.get('/applications/getAllApplications');
-      const data = (res?.data ?? res ?? []) as JobApplication[];
-      setApplications(data);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to load applications.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const [
+    filtered,
+    setFiltered,
+  ] = useState<
+    JobApplication[]
+  >([]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  // ── Filter ─────────────────────────────────────────────────────────────────
+  const [
+    refreshing,
+    setRefreshing,
+  ] = useState(false);
+
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    search,
+    setSearch,
+  ] = useState('');
+
+  const [
+    activeStatus,
+    setActiveStatus,
+  ] = useState<
+    AppStatus | 'all'
+  >('all');
+
+  const [
+    sort,
+    setSort,
+  ] = useState<
+    'newest' | 'oldest'
+  >('newest');
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // FETCH
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const fetchApplications =
+    useCallback(
+      async (
+        isRefresh = false
+      ) => {
+        try {
+          if (isRefresh) {
+            setRefreshing(true);
+          } else {
+            setLoading(true);
+          }
+
+          setError(null);
+
+          console.log(
+            '📡 Fetching applications...'
+          );
+
+          const res: any =
+            await api.get(
+              '/applications/getAllApplications'
+            );
+
+          const data =
+            (res?.data ??
+              res ??
+              []) as JobApplication[];
+
+          console.log(
+            '📡 Applications:',
+            data.length
+          );
+
+          setApplications(
+            data
+          );
+        } catch (e: any) {
+          console.error(
+            '❌ Application fetch error:',
+            e
+          );
+
+          setError(
+            e?.message ??
+              'Failed to load applications.'
+          );
+        } finally {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      },
+      []
+    );
 
   useEffect(() => {
-    let r = [...applications];
-    if (activeStatus !== 'all') r = r.filter(a => a.status === activeStatus);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      r = r.filter(a =>
-        a.company_name?.toLowerCase().includes(q) ||
-        a.job_title?.toLowerCase().includes(q)
-      );
+    fetchApplications();
+  }, [
+    fetchApplications,
+  ]);
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // FILTER
+  // ───────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    let result = [
+      ...applications,
+    ];
+
+    if (
+      activeStatus !==
+      'all'
+    ) {
+      result =
+        result.filter(
+          a =>
+            a.status ===
+            activeStatus
+        );
     }
-    r.sort((a, b) => {
-      const da = new Date(a.created_at).getTime();
-      const db = new Date(b.created_at).getTime();
-      return sort === 'newest' ? db - da : da - db;
-    });
-    setFiltered(r);
-  }, [applications, search, activeStatus, sort]);
 
-  // ── Quick send (navigate to applications/AddApplication with pre-filled id) ───────────────────
+    if (search.trim()) {
+      const q =
+        search.toLowerCase();
 
-  const handleSendEmail = (app: JobApplication) => {
-    router.push({ pathname: '/(app)/applications/AddApplication', params: { applicationId: String(app.id), companyName: app.company_name, jobTitle: app.job_title } });
-  };
+      result =
+        result.filter(
+          a =>
+            a.companyName
+              ?.toLowerCase()
+              .includes(q) ||
+            a.jobTitle
+              ?.toLowerCase()
+              .includes(q)
+        );
+    }
 
-  const handleAdd = () => router.push('/(app)/applications/AddApplication');
+    result.sort(
+      (a, b) => {
+        const da =
+          new Date(
+            a.createdAt
+          ).getTime();
 
-  // ── Counts ─────────────────────────────────────────────────────────────────
+        const db =
+          new Date(
+            b.createdAt
+          ).getTime();
 
-  const count = (s: AppStatus) => applications.filter(a => a.status === s).length;
+        return sort ===
+          'newest'
+          ? db - da
+          : da - db;
+      }
+    );
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+    setFiltered(
+      result
+    );
+  }, [
+    applications,
+    search,
+    activeStatus,
+    sort,
+  ]);
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // ADD APPLICATION
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const handleAdd =
+    useCallback(() => {
+      console.log(
+        '🔥🔥🔥 handleAdd CALLED 🔥🔥🔥'
+      );
+
+      console.log(
+        '➡️ Navigating to AddApplication'
+      );
+
+      router.push({
+        pathname:
+          '/(app)/applications/AddApplication',
+      });
+
+      console.log(
+        '✅ router.push executed'
+      );
+    }, [router]);
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // SEND EMAIL
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const handleSendEmail =
+    useCallback(
+      (
+        app: JobApplication
+      ) => {
+        console.log(
+          '📧 Send email:',
+          app.id
+        );
+
+        router.push({
+          pathname:
+            '/(app)/applications/AddApplication',
+
+          params: {
+            applicationId:
+              String(app.id),
+
+            companyName:
+              app.companyName,
+
+            jobTitle:
+              app.jobTitle,
+          },
+        });
+      },
+      [router]
+    );
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // COUNT
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const count = (
+    status: AppStatus
+  ) =>
+    applications.filter(
+      a =>
+        a.status === status
+    ).length;
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ───────────────────────────────────────────────────────────────────────────
 
   return (
-    <View style={[s.screen, { backgroundColor: colors.background }]}>
+    <View
+      style={[
+        s.screen,
+        {
+          backgroundColor:
+            colors.background,
+        },
+      ]}
+    >
+      {/* ═══════════════════════════════════════════════════════════════════
+          HEADER
+      ═══════════════════════════════════════════════════════════════════ */}
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <View style={[s.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <View style={s.headerLeft}>
-          <Text style={[s.headerTitle, { color: colors.text }]}>Applications</Text>
-          <View style={[s.countBadge, { backgroundColor: colors.primary + '20' }]}>
-            <Text style={[s.countBadgeText, { color: colors.primary }]}>{applications.length}</Text>
+      <View
+        style={[
+          s.header,
+          {
+            backgroundColor:
+              colors.card,
+
+            borderBottomColor:
+              colors.border,
+          },
+        ]}
+      >
+        <View
+          style={
+            s.headerLeft
+          }
+        >
+          <Text
+            style={[
+              s.headerTitle,
+              {
+                color:
+                  colors.text,
+              },
+            ]}
+          >
+            Applications
+          </Text>
+
+          <View
+            style={[
+              s.countBadge,
+              {
+                backgroundColor:
+                  colors.primary +
+                  '20',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                s.countBadgeText,
+                {
+                  color:
+                    colors.primary,
+                },
+              ]}
+            >
+              {
+                applications.length
+              }
+            </Text>
           </View>
         </View>
-        <TouchableOpacity style={[s.addBtn, { backgroundColor: colors.primary }]} onPress={handleAdd}>
-          <Ionicons name="add-circle" size={20} color="#fff" />
-          <Text style={s.addBtnText}>Add New</Text>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            ADD NEW
+        ═══════════════════════════════════════════════════════════════ */}
+
+        <TouchableOpacity
+          style={[
+            s.addBtn,
+            {
+              backgroundColor:
+                colors.primary,
+            },
+          ]}
+          activeOpacity={0.6}
+          onPress={() => {
+            console.log(
+              '🔥🔥🔥 ADD NEW PRESSED 🔥🔥🔥'
+            );
+
+            if (
+              Platform.OS ===
+              'web'
+            ) {
+              console.log(
+                '🌐 Add New pressed on WEB'
+              );
+            }
+
+            handleAdd();
+          }}
+        >
+          <Ionicons
+            name="add-circle"
+            size={20}
+            color="#fff"
+          />
+
+          <Text
+            style={
+              s.addBtnText
+            }
+          >
+            Add New
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── Search + Sort ───────────────────────────────────────────────────── */}
-      <View style={[s.searchRow, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <View style={[s.searchBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
-          <TextInput
-            style={[s.searchInput, { color: colors.text }]}
-            placeholder="Search company or role…"
-            placeholderTextColor={colors.textSecondary}
-            value={search}
-            onChangeText={setSearch}
+      {/* ═══════════════════════════════════════════════════════════════════
+          SEARCH
+      ═══════════════════════════════════════════════════════════════════ */}
+
+      <View
+        style={[
+          s.searchRow,
+          {
+            backgroundColor:
+              colors.card,
+
+            borderBottomColor:
+              colors.border,
+          },
+        ]}
+      >
+        <View
+          style={[
+            s.searchBox,
+            {
+              backgroundColor:
+                colors.background,
+
+              borderColor:
+                colors.border,
+            },
+          ]}
+        >
+          <Ionicons
+            name="search-outline"
+            size={16}
+            color={
+              colors.textSecondary
+            }
           />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+
+          <TextInput
+            style={[
+              s.searchInput,
+              {
+                color:
+                  colors.text,
+              },
+            ]}
+            placeholder="Search company or role…"
+            placeholderTextColor={
+              colors.textSecondary
+            }
+            value={search}
+            onChangeText={
+              setSearch
+            }
+          />
+
+          {search.length >
+            0 && (
+            <TouchableOpacity
+              onPress={() =>
+                setSearch('')
+              }
+            >
+              <Ionicons
+                name="close-circle"
+                size={16}
+                color={
+                  colors.textSecondary
+                }
+              />
             </TouchableOpacity>
           )}
         </View>
+
         <TouchableOpacity
-          style={[s.sortBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
-          onPress={() => setSort(p => p === 'newest' ? 'oldest' : 'newest')}
+          style={[
+            s.sortBtn,
+            {
+              backgroundColor:
+                colors.background,
+
+              borderColor:
+                colors.border,
+            },
+          ]}
+          onPress={() =>
+            setSort(prev =>
+              prev ===
+              'newest'
+                ? 'oldest'
+                : 'newest'
+            )
+          }
         >
-          <Ionicons name={sort === 'newest' ? 'arrow-down' : 'arrow-up'} size={16} color={colors.textSecondary} />
+          <Ionicons
+            name={
+              sort === 'newest'
+                ? 'arrow-down'
+                : 'arrow-up'
+            }
+            size={16}
+            color={
+              colors.textSecondary
+            }
+          />
         </TouchableOpacity>
       </View>
 
-      {/* ── Status Filters ──────────────────────────────────────────────────── */}
-      <View style={[s.filtersWrap, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      {/* ═══════════════════════════════════════════════════════════════════
+          FILTERS
+      ═══════════════════════════════════════════════════════════════════ */}
+
+      <View
+        style={[
+          s.filtersWrap,
+          {
+            backgroundColor:
+              colors.card,
+
+            borderBottomColor:
+              colors.border,
+          },
+        ]}
+      >
         <FlatList
           horizontal
-          showsHorizontalScrollIndicator={false}
-          data={(['all', ...ALL_STATUSES] as (AppStatus | 'all')[])}
-          keyExtractor={i => i}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
-          renderItem={({ item: st }) => {
-            const cfg = st === 'all'
-              ? { label: `All (${applications.length})`, color: colors.primary, bg: colors.primary + '20' }
-              : { label: `${STATUS[st].label} (${count(st)})`, color: STATUS[st].color, bg: STATUS[st].bg };
+          showsHorizontalScrollIndicator={
+            false
+          }
+          data={[
+            'all',
+            ...ALL_STATUSES,
+          ] as (
+            | AppStatus
+            | 'all'
+          )[]}
+          keyExtractor={item =>
+            item
+          }
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            gap: 8,
+          }}
+          renderItem={({
+            item: status,
+          }) => {
+            const cfg =
+              status ===
+              'all'
+                ? {
+                    label: `All (${applications.length})`,
+                    color:
+                      colors.primary,
+                    bg:
+                      colors.primary +
+                      '20',
+                  }
+                : {
+                    label: `${
+                      STATUS[
+                        status
+                      ].label
+                    } (${count(
+                      status
+                    )})`,
+
+                    color:
+                      STATUS[
+                        status
+                      ].color,
+
+                    bg:
+                      STATUS[
+                        status
+                      ].bg,
+                  };
+
             return (
               <Pill
-                label={cfg.label}
-                active={activeStatus === st}
-                color={cfg.color}
+                label={
+                  cfg.label
+                }
+                active={
+                  activeStatus ===
+                  status
+                }
+                color={
+                  cfg.color
+                }
                 bg={cfg.bg}
-                onPress={() => setActiveStatus(st)}
-                colors={colors}
+                colors={
+                  colors
+                }
+                onPress={() =>
+                  setActiveStatus(
+                    status
+                  )
+                }
               />
             );
           }}
         />
       </View>
 
-      {/* ── Error ───────────────────────────────────────────────────────────── */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          CONTENT
+      ═══════════════════════════════════════════════════════════════════ */}
+
       {error ? (
-        <View style={s.errorWrap}>
-          <Ionicons name="cloud-offline-outline" size={44} color="#EF4444" />
-          <Text style={[s.errorTitle, { color: colors.text }]}>Failed to load</Text>
-          <Text style={[s.errorMsg, { color: colors.textSecondary }]}>{error}</Text>
-          <TouchableOpacity style={[s.retryBtn, { backgroundColor: colors.primary }]} onPress={() => fetch()}>
-            <Ionicons name="refresh-outline" size={16} color="#fff" />
-            <Text style={s.retryText}>Retry</Text>
+        <View
+          style={
+            s.errorWrap
+          }
+        >
+          <Ionicons
+            name="cloud-offline-outline"
+            size={44}
+            color="#EF4444"
+          />
+
+          <Text
+            style={[
+              s.errorTitle,
+              {
+                color:
+                  colors.text,
+              },
+            ]}
+          >
+            Failed to load
+          </Text>
+
+          <Text
+            style={[
+              s.errorMsg,
+              {
+                color:
+                  colors.textSecondary,
+              },
+            ]}
+          >
+            {error}
+          </Text>
+
+          <TouchableOpacity
+            style={[
+              s.retryBtn,
+              {
+                backgroundColor:
+                  colors.primary,
+              },
+            ]}
+            onPress={() =>
+              fetchApplications()
+            }
+          >
+            <Ionicons
+              name="refresh-outline"
+              size={16}
+              color="#fff"
+            />
+
+            <Text
+              style={
+                s.retryText
+              }
+            >
+              Retry
+            </Text>
           </TouchableOpacity>
         </View>
       ) : loading ? (
-        <Skeleton colors={colors} />
+        <Skeleton
+          colors={colors}
+        />
       ) : (
         <FlatList
-          data={filtered}
-          keyExtractor={i => String(i.id)}
-          contentContainerStyle={[s.list, filtered.length === 0 && { flex: 1 }]}
-          showsVerticalScrollIndicator={false}
+          style={
+            s.mainList
+          }
+          data={
+            filtered
+          }
+          keyExtractor={item =>
+            String(item.id)
+          }
+          contentContainerStyle={[
+            s.list,
+
+            filtered.length ===
+              0 && {
+              flex: 1,
+            },
+          ]}
+          showsVerticalScrollIndicator={
+            false
+          }
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetch(true)}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
+              refreshing={
+                refreshing
+              }
+              onRefresh={() =>
+                fetchApplications(
+                  true
+                )
+              }
+              tintColor={
+                colors.primary
+              }
+              colors={[
+                colors.primary,
+              ]}
             />
           }
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          ListEmptyComponent={<Empty colors={colors} onAdd={handleAdd} />}
-          renderItem={({ item }) => (
+          ItemSeparatorComponent={() => (
+            <View
+              style={{
+                height: 12,
+              }}
+            />
+          )}
+          ListEmptyComponent={
+            <Empty
+              colors={
+                colors
+              }
+              onAdd={
+                handleAdd
+              }
+            />
+          }
+          renderItem={({
+            item,
+          }) => (
             <AppCard
               item={item}
-              colors={colors}
-              onPress={() => router.push({ pathname: '/(app)/applications/AddApplication', params: { applicationId: String(item.id) } })}
-              onSendEmail={() => handleSendEmail(item)}
+              colors={
+                colors
+              }
+              onPress={() =>
+                router.push(
+                  {
+                    pathname:
+                      '/(app)/applications/AddApplication',
+
+                    params: {
+                      applicationId:
+                        String(
+                          item.id
+                        ),
+                    },
+                  }
+                )
+              }
+              onSendEmail={() =>
+                handleSendEmail(
+                  item
+                )
+              }
             />
           )}
         />
       )}
 
-      {/* ── FAB ─────────────────────────────────────────────────────────────── */}
-      {Platform.OS !== 'web' && (
-        <TouchableOpacity style={[s.fab, { backgroundColor: colors.primary }]} onPress={handleAdd}>
-          <Ionicons name="add" size={28} color="#fff" />
+      {/* ═══════════════════════════════════════════════════════════════════
+          MOBILE FAB
+      ═══════════════════════════════════════════════════════════════════ */}
+
+      {Platform.OS !==
+        'web' && (
+        <TouchableOpacity
+          style={[
+            s.fab,
+            {
+              backgroundColor:
+                colors.primary,
+            },
+          ]}
+          activeOpacity={0.7}
+          onPress={() => {
+            console.log(
+              '🔥 FAB PRESSED'
+            );
+
+            handleAdd();
+          }}
+        >
+          <Ionicons
+            name="add"
+            size={28}
+            color="#fff"
+          />
+        </TouchableOpacity>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          TEMPORARY WEB DEBUG
+      ═══════════════════════════════════════════════════════════════════ */}
+
+      {Platform.OS ===
+        'web' && (
+        <TouchableOpacity
+          style={
+            s.webDebugButton
+          }
+          onPress={() => {
+            console.log(
+              '🟢 WEB DEBUG WORKS'
+            );
+
+            Alert.alert(
+              'Debug',
+              'Touch is working!'
+            );
+          }}
+        >
+          <Text
+            style={
+              s.webDebugText
+            }
+          >
+            DEBUG
+          </Text>
         </TouchableOpacity>
       )}
     </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
-  screen: { flex: 1 },
+const s =
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      position: 'relative',
+    },
 
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 56 : 16,
-    paddingBottom: 14, borderBottomWidth: 1,
-  },
-  headerLeft:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerTitle:     { fontSize: 22, fontWeight: '800' },
-  countBadge:      { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 12 },
-  countBadgeText:  { fontSize: 12, fontWeight: '700' },
-  addBtn:          { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10 },
-  addBtnText:      { color: '#fff', fontSize: 14, fontWeight: '700' },
+    // ───────────────────────────────────────────────────────────────────────
+    // HEADER
+    // ───────────────────────────────────────────────────────────────────────
 
-  searchRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
-  searchBox:   { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
-  searchInput: { flex: 1, fontSize: 14 },
-  sortBtn:     { width: 40, height: 40, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
+        'space-between',
 
-  filtersWrap: { borderBottomWidth: 1 },
+      paddingHorizontal: 16,
 
-  list: { paddingTop: 16, paddingBottom: 100 },
+      paddingTop:
+        Platform.OS === 'ios'
+          ? 56
+          : 16,
 
-  errorWrap:  { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 10 },
-  errorTitle: { fontSize: 18, fontWeight: '700' },
-  errorMsg:   { fontSize: 13, textAlign: 'center' },
-  retryBtn:   { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, marginTop: 8 },
-  retryText:  { color: '#fff', fontSize: 14, fontWeight: '600' },
+      paddingBottom: 14,
 
-  fab: {
-    position: 'absolute', bottom: 28, right: 20,
-    width: 58, height: 58, borderRadius: 29,
-    alignItems: 'center', justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10,
-  },
-});
+      borderBottomWidth: 1,
+
+      // KEY FIX
+      position: 'relative',
+      zIndex: 10000,
+      elevation: 10000,
+
+      ...(Platform.OS ===
+      'web'
+        ? ({
+            pointerEvents:
+              'auto',
+          } as any)
+        : {}),
+    },
+
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+
+      flexShrink: 1,
+    },
+
+    headerTitle: {
+      fontSize: 22,
+      fontWeight: '800',
+    },
+
+    countBadge: {
+      paddingHorizontal: 9,
+      paddingVertical: 3,
+      borderRadius: 12,
+    },
+
+    countBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // ADD BUTTON
+    // ───────────────────────────────────────────────────────────────────────
+
+    addBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
+        'center',
+
+      gap: 5,
+
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+
+      borderRadius: 10,
+
+      // KEY FIX
+      position: 'relative',
+      zIndex: 999999,
+      elevation: 999999,
+
+      flexShrink: 0,
+
+      ...(Platform.OS ===
+      'web'
+        ? ({
+            cursor: 'pointer',
+            pointerEvents:
+              'auto',
+            userSelect: 'none',
+          } as any)
+        : {}),
+    },
+
+    addBtnText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '700',
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // SEARCH
+    // ───────────────────────────────────────────────────────────────────────
+
+    searchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+
+      gap: 10,
+
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+
+      borderBottomWidth: 1,
+
+      position: 'relative',
+      zIndex: 100,
+    },
+
+    searchBox: {
+      flex: 1,
+
+      flexDirection: 'row',
+      alignItems: 'center',
+
+      gap: 8,
+
+      borderWidth: 1,
+      borderRadius: 10,
+
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+    },
+
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+    },
+
+    sortBtn: {
+      width: 40,
+      height: 40,
+
+      borderRadius: 10,
+      borderWidth: 1,
+
+      alignItems: 'center',
+      justifyContent:
+        'center',
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // FILTERS
+    // ───────────────────────────────────────────────────────────────────────
+
+    filtersWrap: {
+      borderBottomWidth: 1,
+
+      position: 'relative',
+      zIndex: 50,
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // LIST
+    // ───────────────────────────────────────────────────────────────────────
+
+    mainList: {
+      flex: 1,
+
+      position: 'relative',
+
+      zIndex: 1,
+    },
+
+    list: {
+      paddingTop: 16,
+      paddingBottom: 100,
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // ERROR
+    // ───────────────────────────────────────────────────────────────────────
+
+    errorWrap: {
+      flex: 1,
+
+      alignItems: 'center',
+      justifyContent:
+        'center',
+
+      padding: 40,
+
+      gap: 10,
+    },
+
+    errorTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+    },
+
+    errorMsg: {
+      fontSize: 13,
+      textAlign: 'center',
+    },
+
+    retryBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+
+      gap: 8,
+
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+
+      borderRadius: 10,
+
+      marginTop: 8,
+    },
+
+    retryText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // FAB
+    // ───────────────────────────────────────────────────────────────────────
+
+    fab: {
+      position: 'absolute',
+
+      bottom: 28,
+      right: 20,
+
+      width: 58,
+      height: 58,
+
+      borderRadius: 29,
+
+      alignItems: 'center',
+      justifyContent:
+        'center',
+
+      zIndex: 999999,
+      elevation: 999999,
+
+      shadowColor: '#000',
+
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // DEBUG
+    // ───────────────────────────────────────────────────────────────────────
+
+    webDebugButton: {
+      position: 'absolute',
+
+      bottom: 20,
+      left: 20,
+
+      backgroundColor:
+        '#00AA00',
+
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+
+      borderRadius: 10,
+
+      zIndex: 9999999,
+      elevation: 9999999,
+
+      ...(Platform.OS ===
+      'web'
+        ? ({
+            cursor: 'pointer',
+          } as any)
+        : {}),
+    },
+
+    webDebugText: {
+      color: '#fff',
+      fontWeight: '800',
+      fontSize: 14,
+    },
+  });

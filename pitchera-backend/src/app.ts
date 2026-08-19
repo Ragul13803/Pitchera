@@ -11,9 +11,9 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import authRoutes from "./routes/auth.routes";
 import profileRoutes from "./routes/profile.routes";
 import gmailRoutes from "./routes/gmail.routes";
-import jobsRoutes from "./routes/jobs.routes";
 import emailRoutes from "./routes/email.routes";
 import applicationRoutes from "./routes/applications.routes";
+import chatRoutes from "./routes/chat.routes";
 
 const app = express();
 
@@ -207,13 +207,12 @@ app.use( "/api/profile", profileRoutes );
 // Gmail
 app.use( "/api/gmail", gmailRoutes );
 
-// Jobs
-app.use( "/api/jobs", jobsRoutes );
-
 // Email
 app.use( "/api/emails", emailRoutes );
 
 app.use("/api/applications", applicationRoutes);
+
+app.use('/api/chat', chatRoutes);
 
 
 /**

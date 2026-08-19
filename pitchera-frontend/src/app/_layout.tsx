@@ -6,28 +6,19 @@ import * as WebBrowser from "expo-web-browser";
 import Head from "expo-router/head";
 import { useFonts } from "expo-font";
 
-import {
-  CormorantGaramond_400Regular,
-  CormorantGaramond_500Medium,
-  CormorantGaramond_600SemiBold,
-  CormorantGaramond_700Bold,
-  CormorantGaramond_400Regular_Italic,
-} from "@expo-google-fonts/cormorant-garamond";
+import { Alkatra_400Regular } from "@expo-google-fonts/alkatra";
 
 import { applyGlobalFontPatch } from "@/globalFontPatch";
 
 import "../global.css";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/components/ui/toastConfig";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    CormorantGaramond_400Regular,
-    CormorantGaramond_500Medium,
-    CormorantGaramond_600SemiBold,
-    CormorantGaramond_700Bold,
-    CormorantGaramond_400Regular_Italic,
+    Alkatra_400Regular,
   });
 
   if (fontError) {
@@ -42,20 +33,24 @@ export default function RootLayout() {
   applyGlobalFontPatch();
 
   return (
-    <>
     <ThemeProvider>
       <AuthProvider>
-      <Head>
-        <title>Pitchera</title>
-      </Head>
+        <Head>
+          <title>Pitchera</title>
+        </Head>
+
         <Stack
           screenOptions={{
             headerShown: false,
           }}
         />
+
+        <Toast
+          config={toastConfig}
+          position="top"
+          topOffset={20}
+        />
       </AuthProvider>
     </ThemeProvider>
-    <Toast />
-    </>
   );
 }

@@ -5,6 +5,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
 type PopupModalProps = {
   visible: boolean;
@@ -29,6 +30,8 @@ export default function PopupModal({
   onClose,
   onConfirm,
 }: PopupModalProps) {
+  const { colors } = useTheme();
+
   return (
     <Modal
       visible={visible}
@@ -37,14 +40,19 @@ export default function PopupModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
           {/* Title */}
-          <Text style={styles.title}>
+          <Text style={[styles.title, { color: colors.text }]}>
             {title}
           </Text>
 
           {/* Message */}
-          <Text style={styles.message}>
+          <Text style={[styles.message, { color: colors.textSecondary }]}>
             {message}
           </Text>
 
@@ -55,10 +63,11 @@ export default function PopupModal({
               onPress={onClose}
               style={({ pressed }) => [
                 styles.cancelButton,
+                { borderColor: colors.border },
                 pressed && styles.buttonPressed,
               ]}
             >
-              <Text style={styles.cancelText}>
+              <Text style={[styles.cancelText, { color: colors.text }]}>
                 {cancelText}
               </Text>
             </Pressable>
@@ -109,12 +118,9 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 448,
 
-    backgroundColor: "#FFFFFF",
-
     borderRadius: 16,
 
     borderWidth: 1,
-    borderColor: "#EFC1C1",
 
     padding: 20,
 
@@ -139,8 +145,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
 
     fontWeight: "800",
-
-    color: "#9F2B2B",
   },
 
   /* ================================
@@ -153,8 +157,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
 
     lineHeight: 20,
-
-    color: "#444444",
   },
 
   /* ================================
@@ -188,8 +190,6 @@ const styles = StyleSheet.create({
 
     borderWidth: 1,
 
-    borderColor: "#D1D5DB",
-
     justifyContent: "center",
     alignItems: "center",
   },
@@ -198,8 +198,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
 
     fontWeight: "700",
-
-    color: "#374151",
   },
 
   /* ================================

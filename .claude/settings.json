@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm /home/ragul/Ragul/Personal/Project/Pitchera/pitchera-backend/src/jobs/scheduler.ts)",
+      "Bash(npx tsc *)"
+    ],
+    "additionalDirectories": [
+      "/home/ragul/Ragul/Personal/Project/Pitchera/pitchera-backend/src/jobs"
+    ]
+  }
+}

@@ -1,4 +1,5 @@
 import { useLogout } from "@/hooks/useLogout";
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import { useState } from "react";
@@ -12,6 +13,7 @@ import {
 
 import PITCHERA_FULL_LOGO from "@/assets/images/pitchera_full_logo.png";
 import PopupModal from "./PopupModal";
+import Toast from "react-native-toast-message";
 
 const menuItems = [
   {
@@ -34,22 +36,29 @@ const menuItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { logout } = useLogout();
+  const { colors } = useTheme();
 
   const [showLogout, setShowLogout] = useState(false);
 
   const handleLogout = async () => {
     setShowLogout(false);
     await logout();
+    Toast.show({ type: "success", text1: "Logout Successful!" });
   };
 
   return (
     <>
-      <View style={styles.sidebar}>
+      <View
+        style={[
+          styles.sidebar,
+          { backgroundColor: colors.card, borderColor: colors.border },
+        ]}
+      >
         {/* Top Section */}
         <View style={styles.topSection}>
           {/* Brand */}
           <View style={styles.brand}>
-            <View style={styles.logoContainer}>
+            <View style={[styles.logoContainer, { backgroundColor: colors.background }]}>
               <Image
                 source={PITCHERA_FULL_LOGO}
                 style={styles.logoImage}
@@ -69,19 +78,20 @@ export function Sidebar() {
                   onPress={() => router.push(item.route as any)}
                   style={({ pressed }) => [
                     styles.menuItem,
-                    isActive && styles.menuItemActive,
+                    isActive && { backgroundColor: colors.primary + "18" },
                     pressed && styles.menuItemPressed,
                   ]}
                 >
                   <Ionicons
                     name={item.icon}
                     size={20}
-                    color={isActive ? "#2563EB" : "#64748B"}
+                    color={isActive ? colors.primary : colors.textSecondary}
                   />
 
                   <Text
                     style={[
                       styles.menuText,
+                      { color: isActive ? colors.primary : colors.textSecondary },
                       isActive && styles.menuTextActive,
                     ]}
                   >
@@ -95,7 +105,7 @@ export function Sidebar() {
 
         {/* Bottom Section */}
         <View style={styles.bottom}>
-          <View style={styles.bottomBorder} />
+          <View style={[styles.bottomBorder, { backgroundColor: colors.border }]} />
 
           <Pressable
             onPress={() => setShowLogout(true)}
@@ -138,10 +148,7 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 250,
 
-    backgroundColor: "#FFFFFF",
-
     borderWidth: 1,
-    borderColor: "#E5E7EB",
 
     paddingHorizontal: 12,
     paddingVertical: 18,
@@ -177,8 +184,6 @@ const styles = StyleSheet.create({
 
     overflow: "hidden",
 
-    backgroundColor: "#F8FAFC",
-
     alignItems: "center",
     justifyContent: "center",
   },
@@ -212,10 +217,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  menuItemActive: {
-    backgroundColor: "#EFF6FF",
-  },
-
   menuItemPressed: {
     opacity: 0.7,
   },
@@ -224,13 +225,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
 
     fontWeight: "500",
-
-    color: "#64748B",
   },
 
   menuTextActive: {
-    color: "#2563EB",
-
     fontWeight: "700",
   },
 
@@ -255,23 +252,25 @@ const styles = StyleSheet.create({
      LOGOUT
   ================================= */
 
-  logoutButton: {
-    minHeight: 48,
+logoutButton: {
+  minHeight: 48,
+  width: "100%",
+  paddingHorizontal: 12,
 
-    width: "100%",
+  borderRadius: 10,
+  borderWidth: 1.8,
+  borderColor: "#cd5252",
 
-    paddingHorizontal: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
 
-    borderRadius: 10,
-
-    flexDirection: "row",
-    alignItems: "center",
-
-    gap: 12,
-  },
+  backgroundColor: "#f3c1c1",
+},
 
   logoutPressed: {
     backgroundColor: "#FEF2F2",
+    opacity: 0.7,
   },
 
   logoutText: {

@@ -1,9 +1,11 @@
 import app from "./app";
 import { env } from "./config/env";
 import { testConnection } from "./database/db";
+import { startEmailScheduler } from "./jobs/emailScheduler";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { startCleanupJob } from "./jobs/cleanupJob";
 
 async function start(): Promise<void> {
   // Ensure upload directories exist
@@ -26,6 +28,9 @@ async function start(): Promise<void> {
     );
     console.log(`📍 Environment: ${env.nodeEnv}`);
     console.log(`🌐 Frontend URL: ${env.frontendUrl}`);
+
+    startEmailScheduler();
+    startCleanupJob();
 
     const interfaces = os.networkInterfaces();
 
