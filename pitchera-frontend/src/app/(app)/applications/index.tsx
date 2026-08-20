@@ -1,10 +1,6 @@
 // src/app/(app)/applications.tsx
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-} from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 
 import {
   View,
@@ -15,18 +11,15 @@ import {
   TextInput,
   RefreshControl,
   Platform,
-} from 'react-native';
+} from "react-native";
 
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
-import api from '@/services/api';
-import { useTheme } from '@/context/ThemeContext';
+import api from "@/services/api";
+import { useTheme } from "@/context/ThemeContext";
 
-import type {
-  AppStatus,
-  JobApplication,
-} from '@/types';
+import type { AppStatus, JobApplication } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATUS CONFIG
@@ -42,169 +35,102 @@ const STATUS: Record<
   }
 > = {
   draft: {
-    label: 'Draft',
-    color: '#6B7280',
-    bg: '#F3F4F6',
-    icon: 'document-outline',
+    label: "Draft",
+    color: "#6B7280",
+    bg: "#F3F4F6",
+    icon: "document-outline",
   },
 
   scheduled: {
-    label: 'Scheduled',
-    color: '#D97706',
-    bg: '#FEF3C7',
-    icon: 'time-outline',
+    label: "Scheduled",
+    color: "#D97706",
+    bg: "#FEF3C7",
+    icon: "time-outline",
   },
 
   sent: {
-    label: 'Sent',
-    color: '#2563EB',
-    bg: '#DBEAFE',
-    icon: 'mail-outline',
+    label: "Sent",
+    color: "#2563EB",
+    bg: "#DBEAFE",
+    icon: "mail-outline",
   },
 
   failed: {
-    label: 'Failed',
-    color: '#DC2626',
-    bg: '#FEE2E2',
-    icon: 'alert-circle-outline',
-  },
-
-  interview: {
-    label: 'Interview',
-    color: '#7C3AED',
-    bg: '#EDE9FE',
-    icon: 'people-outline',
-  },
-
-  rejected: {
-    label: 'Rejected',
-    color: '#9CA3AF',
-    bg: '#F9FAFB',
-    icon: 'close-circle-outline',
-  },
-
-  selected: {
-    label: 'Selected',
-    color: '#059669',
-    bg: '#D1FAE5',
-    icon: 'checkmark-circle-outline',
-  },
-
-  offer: {
-    label: 'Offer',
-    color: '#065F46',
-    bg: '#A7F3D0',
-    icon: 'trophy-outline',
+    label: "Failed",
+    color: "#DC2626",
+    bg: "#FEE2E2",
+    icon: "alert-circle-outline",
   },
 };
 
-const ALL_STATUSES =
-  Object.keys(STATUS) as AppStatus[];
+const ALL_STATUSES = Object.keys(STATUS) as AppStatus[];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function fmtDate(
-  iso: string | null
-): string {
-  if (!iso) return '—';
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
 
-  return new Date(iso).toLocaleDateString(
-    'en-US',
-    {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }
-  );
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
-function fmtDateTime(
-  iso: string | null
-): string {
-  if (!iso) return '—';
+function fmtDateTime(iso: string | null): string {
+  if (!iso) return "—";
 
-  return new Date(iso).toLocaleString(
-    'en-US',
-    {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }
-  );
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-function getInitial(
-  name: string
-): string {
-  return (
-    name
-      ?.trim()
-      ?.charAt(0)
-      ?.toUpperCase() ?? '?'
-  );
+function getInitial(name: string): string {
+  return name?.trim()?.charAt(0)?.toUpperCase() ?? "?";
 }
 
 const AVATAR_COLORS = [
-  '#6366F1',
-  '#0EA5E9',
-  '#10B981',
-  '#F59E0B',
-  '#EF4444',
-  '#8B5CF6',
-  '#EC4899',
+  "#6366F1",
+  "#0EA5E9",
+  "#10B981",
+  "#F59E0B",
+  "#EF4444",
+  "#8B5CF6",
+  "#EC4899",
 ];
 
-function avatarColor(
-  name: string
-): string {
+function avatarColor(name: string): string {
   let h = 0;
 
-  for (
-    let i = 0;
-    i < name.length;
-    i++
-  ) {
-    h =
-      name.charCodeAt(i) +
-      ((h << 5) - h);
+  for (let i = 0; i < name.length; i++) {
+    h = name.charCodeAt(i) + ((h << 5) - h);
   }
 
-  return AVATAR_COLORS[
-    Math.abs(h) %
-      AVATAR_COLORS.length
-  ];
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATUS BADGE
 // ─────────────────────────────────────────────────────────────────────────────
 
-function StatusBadge({
-  status,
-}: {
-  status: AppStatus;
-}) {
-  const item =
-    STATUS[status] ?? STATUS.draft;
+function StatusBadge({ status }: { status: AppStatus }) {
+  const item = STATUS[status] ?? STATUS.draft;
 
   return (
     <View
       style={[
         sb.wrap,
         {
-          backgroundColor:
-            item.bg,
+          backgroundColor: item.bg,
         },
       ]}
     >
-      <Ionicons
-        name={item.icon as any}
-        size={11}
-        color={item.color}
-      />
+      <Ionicons name={item.icon as any} size={11} color={item.color} />
 
       <Text
         style={[
@@ -222,8 +148,8 @@ function StatusBadge({
 
 const sb = StyleSheet.create({
   wrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -232,7 +158,7 @@ const sb = StyleSheet.create({
 
   text: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });
 
@@ -240,11 +166,7 @@ const sb = StyleSheet.create({
 // SKELETON
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Skeleton({
-  colors,
-}: {
-  colors: any;
-}) {
+function Skeleton({ colors }: { colors: any }) {
   return (
     <View
       style={{
@@ -252,79 +174,71 @@ function Skeleton({
         gap: 12,
       }}
     >
-      {[1, 2, 3, 4, 5].map(
-        i => (
+      {[1, 2, 3, 4, 5].map((i) => (
+        <View
+          key={i}
+          style={[
+            sk.card,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <View
-            key={i}
             style={[
-              sk.card,
+              sk.circle,
               {
-                backgroundColor:
-                  colors.card,
-                borderColor:
-                  colors.border,
+                backgroundColor: colors.border,
               },
             ]}
+          />
+
+          <View
+            style={{
+              flex: 1,
+              gap: 8,
+            }}
           >
             <View
               style={[
-                sk.circle,
+                sk.line,
                 {
-                  backgroundColor:
-                    colors.border,
+                  width: "60%",
+                  backgroundColor: colors.border,
                 },
               ]}
             />
 
             <View
-              style={{
-                flex: 1,
-                gap: 8,
-              }}
-            >
-              <View
-                style={[
-                  sk.line,
-                  {
-                    width: '60%',
-                    backgroundColor:
-                      colors.border,
-                  },
-                ]}
-              />
+              style={[
+                sk.line,
+                {
+                  width: "40%",
+                  backgroundColor: colors.border,
+                },
+              ]}
+            />
 
-              <View
-                style={[
-                  sk.line,
-                  {
-                    width: '40%',
-                    backgroundColor:
-                      colors.border,
-                  },
-                ]}
-              />
-
-              <View
-                style={[
-                  sk.line,
-                  {
-                    width: '30%',
-                    backgroundColor:
-                      colors.border,
-                  },
-                ]}
-              />
-            </View>
+            <View
+              style={[
+                sk.line,
+                {
+                  width: "30%",
+                  backgroundColor: colors.border,
+                },
+              ]}
+            />
           </View>
-        )
-      )}
+        </View>
+      ))}
     </View>
   );
 }
 
 const sk = StyleSheet.create({
   card: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     padding: 14,
     borderRadius: 12,
@@ -347,56 +261,38 @@ const sk = StyleSheet.create({
 // APPLICATION DETAIL
 // ─────────────────────────────────────────────────────────────────────────────
 
-function relevantDetail(
-  item: JobApplication
-): {
+function relevantDetail(item: JobApplication): {
   icon: string;
   text: string;
   color?: string;
 } {
-  if (
-    item.status === 'scheduled' &&
-    item.scheduledAt
-  ) {
+  if (item.status === "scheduled" && item.scheduledAt) {
     return {
-      icon: 'time-outline',
-      text: `Scheduled ${fmtDateTime(
-        item.scheduledAt
-      )}`,
-      color: '#D97706',
+      icon: "time-outline",
+      text: `Scheduled ${fmtDateTime(item.scheduledAt)}`,
+      color: "#D97706",
     };
   }
 
-  if (
-    item.status === 'sent' &&
-    item.sentAt
-  ) {
+  if (item.status === "sent" && item.sentAt) {
     return {
-      icon: 'checkmark-done-outline',
-      text: `Sent ${fmtDateTime(
-        item.sentAt
-      )}`,
-      color: '#2563EB',
+      icon: "checkmark-done-outline",
+      text: `Sent ${fmtDateTime(item.sentAt)}`,
+      color: "#2563EB",
     };
   }
 
-  if (
-    item.status === 'failed' &&
-    item.errorMessage
-  ) {
+  if (item.status === "failed" && item.errorMessage) {
     return {
-      icon: 'alert-circle-outline',
+      icon: "alert-circle-outline",
       text: item.errorMessage,
-      color: '#DC2626',
+      color: "#DC2626",
     };
   }
 
   return {
-    icon: 'calendar-outline',
-    text: fmtDate(
-      item.appliedAt ||
-        item.createdAt
-    ),
+    icon: "calendar-outline",
+    text: fmtDate(item.appliedAt || item.createdAt),
   };
 }
 
@@ -415,54 +311,39 @@ function AppCard({
   onPress: () => void;
   onSendEmail: () => void;
 }) {
-  const bg = avatarColor(
-    item.companyName
-  );
+  const bg = avatarColor(item.companyName);
 
-  const canSend =
-    item.status !== 'sent' &&
-    item.status !== 'selected' &&
-    item.status !== 'offer';
+  // Only already-sent applications
+  // cannot be sent again.
+  const canSend = item.status !== "sent";
 
-  const detail =
-    relevantDetail(item);
+  const detail = relevantDetail(item);
 
-  const primaryRecipient =
-    item.recipients[0];
+  const primaryRecipient = item.recipients[0];
 
   return (
     <TouchableOpacity
       style={[
         card.wrap,
         {
-          backgroundColor:
-            colors.card,
-          borderColor:
-            colors.border,
+          backgroundColor: colors.card,
+          borderColor: colors.border,
         },
       ]}
       onPress={onPress}
       activeOpacity={0.75}
     >
+      {/* TOP ROW */}
       <View style={card.topRow}>
         <View
           style={[
             card.avatar,
             {
-              backgroundColor:
-                bg,
+              backgroundColor: bg,
             },
           ]}
         >
-          <Text
-            style={
-              card.avatarText
-            }
-          >
-            {getInitial(
-              item.companyName
-            )}
-          </Text>
+          <Text style={card.avatarText}>{getInitial(item.companyName)}</Text>
         </View>
 
         <View style={card.info}>
@@ -470,8 +351,7 @@ function AppCard({
             style={[
               card.company,
               {
-                color:
-                  colors.text,
+                color: colors.text,
               },
             ]}
             numberOfLines={1}
@@ -483,8 +363,7 @@ function AppCard({
             style={[
               card.role,
               {
-                color:
-                  colors.textSecondary,
+                color: colors.textSecondary,
               },
             ]}
             numberOfLines={1}
@@ -493,67 +372,50 @@ function AppCard({
           </Text>
         </View>
 
-        <StatusBadge
-          status={item.status}
-        />
+        <StatusBadge status={item.status} />
       </View>
 
+      {/* RECIPIENT */}
       {primaryRecipient && (
         <Text
           style={[
             card.recipient,
             {
-              color:
-                colors.textSecondary,
+              color: colors.textSecondary,
             },
           ]}
           numberOfLines={1}
         >
-          {primaryRecipient.name ||
-            primaryRecipient.email}
+          {primaryRecipient.name || primaryRecipient.email}
 
-          {item.recipientCount >
-          1
-            ? ` + ${
-                item.recipientCount -
-                1
-              } more`
-            : ''}
+          {item.recipientCount > 1 ? ` + ${item.recipientCount - 1} more` : ""}
         </Text>
       )}
 
+      {/* DIVIDER */}
       <View
         style={[
           card.divider,
           {
-            backgroundColor:
-              colors.border,
+            backgroundColor: colors.border,
           },
         ]}
       />
 
-      <View
-        style={card.bottomRow}
-      >
+      {/* BOTTOM ROW */}
+      <View style={card.bottomRow}>
         <View style={card.meta}>
           <Ionicons
-            name={
-              detail.icon as any
-            }
+            name={detail.icon as any}
             size={12}
-            color={
-              detail.color ??
-              colors.textSecondary
-            }
+            color={detail.color ?? colors.textSecondary}
           />
 
           <Text
             style={[
               card.metaText,
               {
-                color:
-                  detail.color ??
-                  colors.textSecondary,
+                color: detail.color ?? colors.textSecondary,
               },
             ]}
             numberOfLines={1}
@@ -567,34 +429,21 @@ function AppCard({
             style={[
               card.sendBtn,
               {
-                backgroundColor:
-                  colors.primary,
+                backgroundColor: colors.primary,
               },
             ]}
-            onPress={e => {
+            onPress={(e) => {
               e.stopPropagation?.();
 
-              console.log(
-                '📧 SEND MAIL CLICKED'
-              );
+              console.log("📧 SEND MAIL CLICKED");
 
               onSendEmail();
             }}
             activeOpacity={0.8}
           >
-            <Ionicons
-              name="send-outline"
-              size={13}
-              color="#fff"
-            />
+            <Ionicons name="send-outline" size={13} color="#fff" />
 
-            <Text
-              style={
-                card.sendBtnText
-              }
-            >
-              Send Mail
-            </Text>
+            <Text style={card.sendBtnText}>Send Mail</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -611,7 +460,7 @@ const card = StyleSheet.create({
 
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: "#000",
         shadowOffset: {
           width: 0,
           height: 2,
@@ -625,15 +474,14 @@ const card = StyleSheet.create({
       },
 
       web: {
-        boxShadow:
-          '0 2px 8px rgba(0,0,0,0.07)',
+        boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
       } as any,
     }),
   },
 
   topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
 
@@ -641,14 +489,14 @@ const card = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   avatarText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
   },
 
   info: {
@@ -657,7 +505,7 @@ const card = StyleSheet.create({
 
   company: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
   role: {
@@ -676,16 +524,15 @@ const card = StyleSheet.create({
   },
 
   bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent:
-      'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
   },
 
   meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 5,
     flex: 1,
   },
@@ -696,8 +543,8 @@ const card = StyleSheet.create({
   },
 
   sendBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 5,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -705,14 +552,14 @@ const card = StyleSheet.create({
   },
 
   sendBtnText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PILL
+// FILTER PILL
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Pill({
@@ -735,15 +582,9 @@ function Pill({
       style={[
         pill.wrap,
         {
-          backgroundColor:
-            active
-              ? bg
-              : colors.card,
+          backgroundColor: active ? bg : colors.card,
 
-          borderColor:
-            active
-              ? color
-              : colors.border,
+          borderColor: active ? color : colors.border,
         },
       ]}
       onPress={onPress}
@@ -752,10 +593,7 @@ function Pill({
         style={[
           pill.text,
           {
-            color:
-              active
-                ? color
-                : colors.textSecondary,
+            color: active ? color : colors.textSecondary,
           },
         ]}
       >
@@ -775,7 +613,7 @@ const pill = StyleSheet.create({
 
   text: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 
@@ -783,37 +621,25 @@ const pill = StyleSheet.create({
 // EMPTY STATE
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Empty({
-  colors,
-  onAdd,
-}: {
-  colors: any;
-  onAdd: () => void;
-}) {
+function Empty({ colors, onAdd }: { colors: any; onAdd: () => void }) {
   return (
     <View style={em.wrap}>
       <View
         style={[
           em.iconWrap,
           {
-            backgroundColor:
-              colors.card,
+            backgroundColor: colors.card,
           },
         ]}
       >
-        <Ionicons
-          name="mail-outline"
-          size={52}
-          color={colors.primary}
-        />
+        <Ionicons name="mail-outline" size={52} color={colors.primary} />
       </View>
 
       <Text
         style={[
           em.title,
           {
-            color:
-              colors.text,
+            color: colors.text,
           },
         ]}
       >
@@ -824,43 +650,30 @@ function Empty({
         style={[
           em.sub,
           {
-            color:
-              colors.textSecondary,
+            color: colors.textSecondary,
           },
         ]}
       >
-        Start sending cold emails
-        to recruiters and track
-        every application here.
+        Start sending cold emails to recruiters and track every application
+        here.
       </Text>
 
       <TouchableOpacity
         style={[
           em.btn,
           {
-            backgroundColor:
-              colors.primary,
+            backgroundColor: colors.primary,
           },
         ]}
         onPress={() => {
-          console.log(
-            '🔥 EMPTY NEW APPLICATION CLICKED'
-          );
+          console.log("🔥 EMPTY NEW APPLICATION CLICKED");
 
           onAdd();
         }}
       >
-        <Ionicons
-          name="add"
-          size={18}
-          color="#fff"
-        />
+        <Ionicons name="add" size={18} color="#fff" />
 
-        <Text
-          style={em.btnText}
-        >
-          New Application
-        </Text>
+        <Text style={em.btnText}>New Application</Text>
       </TouchableOpacity>
     </View>
   );
@@ -869,8 +682,8 @@ function Empty({
 const em = StyleSheet.create({
   wrap: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 40,
   },
 
@@ -878,28 +691,28 @@ const em = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 20,
   },
 
   title: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: "800",
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
 
   sub: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 22,
     marginBottom: 28,
   },
 
   btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 24,
     paddingVertical: 13,
@@ -907,9 +720,9 @@ const em = StyleSheet.create({
   },
 
   btnText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });
 
@@ -918,248 +731,134 @@ const em = StyleSheet.create({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ApplicationScreen() {
-  const router =
-    useRouter();
+  const router = useRouter();
 
-  const { colors } =
-    useTheme();
+  const { colors } = useTheme();
 
-  const [
-    applications,
-    setApplications,
-  ] = useState<
-    JobApplication[]
-  >([]);
+  const [applications, setApplications] = useState<JobApplication[]>([]);
 
-  const [
-    filtered,
-    setFiltered,
-  ] = useState<
-    JobApplication[]
-  >([]);
+  const [filtered, setFiltered] = useState<JobApplication[]>([]);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [
-    refreshing,
-    setRefreshing,
-  ] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [
-    error,
-    setError,
-  ] = useState<string | null>(
-    null
-  );
+  const [error, setError] = useState<string | null>(null);
 
-  const [
-    search,
-    setSearch,
-  ] = useState('');
+  const [search, setSearch] = useState("");
 
-  const [
-    activeStatus,
-    setActiveStatus,
-  ] = useState<
-    AppStatus | 'all'
-  >('all');
+  const [activeStatus, setActiveStatus] = useState<AppStatus | "all">("all");
 
-  const [
-    sort,
-    setSort,
-  ] = useState<
-    'newest' | 'oldest'
-  >('newest');
+  const [sort, setSort] = useState<"newest" | "oldest">("newest");
 
   // ───────────────────────────────────────────────────────────────────────────
   // FETCH
   // ───────────────────────────────────────────────────────────────────────────
 
-  const fetchApplications =
-    useCallback(
-      async (
-        isRefresh = false
-      ) => {
-        try {
-          if (isRefresh) {
-            setRefreshing(true);
-          } else {
-            setLoading(true);
-          }
+  const fetchApplications = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-          setError(null);
+      setError(null);
 
-          console.log(
-            '📡 Fetching applications...'
-          );
+      console.log("📡 Fetching applications...");
 
-          const res: any =
-            await api.get(
-              '/applications/getAllApplications'
-            );
+      const res: any = await api.get("/applications/getAllApplications");
 
-          const data =
-            (res?.data ??
-              res ??
-              []) as JobApplication[];
+      const data = (res?.data ?? res ?? []) as JobApplication[];
 
-          console.log(
-            '📡 Applications:',
-            data.length
-          );
+      console.log("📡 Applications:", data.length);
 
-          setApplications(
-            data
-          );
-        } catch (e: any) {
-          console.error(
-            '❌ Application fetch error:',
-            e
-          );
+      setApplications(data);
+    } catch (e: any) {
+      console.error("❌ Application fetch error:", e);
 
-          setError(
-            e?.message ??
-              'Failed to load applications.'
-          );
-        } finally {
-          setLoading(false);
-          setRefreshing(false);
-        }
-      },
-      []
-    );
+      setError(e?.message ?? "Failed to load applications.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchApplications();
-  }, [
-    fetchApplications,
-  ]);
+  }, [fetchApplications]);
 
   // ───────────────────────────────────────────────────────────────────────────
   // FILTER
   // ───────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    let result = [
-      ...applications,
-    ];
+    let result = [...applications];
 
-    if (
-      activeStatus !==
-      'all'
-    ) {
-      result =
-        result.filter(
-          a =>
-            a.status ===
-            activeStatus
-        );
+    if (activeStatus !== "all") {
+      result = result.filter((a) => a.status === activeStatus);
     }
 
     if (search.trim()) {
-      const q =
-        search.toLowerCase();
+      const q = search.toLowerCase();
 
-      result =
-        result.filter(
-          a =>
-            a.companyName
-              ?.toLowerCase()
-              .includes(q) ||
-            a.jobTitle
-              ?.toLowerCase()
-              .includes(q)
-        );
+      result = result.filter(
+        (a) =>
+          a.companyName?.toLowerCase().includes(q) ||
+          a.jobTitle?.toLowerCase().includes(q),
+      );
     }
 
-    result.sort(
-      (a, b) => {
-        const da =
-          new Date(
-            a.createdAt
-          ).getTime();
+    result.sort((a, b) => {
+      const da = new Date(a.createdAt).getTime();
 
-        const db =
-          new Date(
-            b.createdAt
-          ).getTime();
+      const db = new Date(b.createdAt).getTime();
 
-        return sort ===
-          'newest'
-          ? db - da
-          : da - db;
-      }
-    );
+      return sort === "newest" ? db - da : da - db;
+    });
 
-    setFiltered(
-      result
-    );
-  }, [
-    applications,
-    search,
-    activeStatus,
-    sort,
-  ]);
+    setFiltered(result);
+  }, [applications, search, activeStatus, sort]);
 
   // ───────────────────────────────────────────────────────────────────────────
   // ADD APPLICATION
   // ───────────────────────────────────────────────────────────────────────────
 
-  const handleAdd =
-    useCallback(() => {
-      router.push({
-        pathname:
-          '/(app)/applications/AddApplication',
-      });
-    }, [router]);
+  const handleAdd = useCallback(() => {
+    router.push({
+      pathname: "/(app)/applications/AddApplication",
+    });
+  }, [router]);
 
   // ───────────────────────────────────────────────────────────────────────────
   // SEND EMAIL
   // ───────────────────────────────────────────────────────────────────────────
 
-  const handleSendEmail =
-    useCallback(
-      (
-        app: JobApplication
-      ) => {
-        console.log(
-          '📧 Send email:',
-          app.id
-        );
+  const handleSendEmail = useCallback(
+    (app: JobApplication) => {
+      console.log("📧 Send email:", app.id);
 
-        router.push({
-          pathname:
-            '/(app)/applications/AddApplication',
+      router.push({
+        pathname: "/(app)/applications/AddApplication",
 
-          params: {
-            applicationId:
-              String(app.id),
+        params: {
+          applicationId: String(app.id),
 
-            companyName:
-              app.companyName,
+          companyName: app.companyName,
 
-            jobTitle:
-              app.jobTitle,
-          },
-        });
-      },
-      [router]
-    );
+          jobTitle: app.jobTitle,
+        },
+      });
+    },
+    [router],
+  );
 
   // ───────────────────────────────────────────────────────────────────────────
   // COUNT
   // ───────────────────────────────────────────────────────────────────────────
 
-  const count = (
-    status: AppStatus
-  ) =>
-    applications.filter(
-      a =>
-        a.status === status
-    ).length;
+  const count = (status: AppStatus) =>
+    applications.filter((a) => a.status === status).length;
 
   // ───────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -1170,38 +869,28 @@ export default function ApplicationScreen() {
       style={[
         s.screen,
         {
-          backgroundColor:
-            colors.background,
+          backgroundColor: colors.background,
         },
       ]}
     >
-      {/* ═══════════════════════════════════════════════════════════════════
-          HEADER
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* HEADER */}
 
       <View
         style={[
           s.header,
           {
-            backgroundColor:
-              colors.card,
+            backgroundColor: colors.card,
 
-            borderBottomColor:
-              colors.border,
+            borderBottomColor: colors.border,
           },
         ]}
       >
-        <View
-          style={
-            s.headerLeft
-          }
-        >
+        <View style={s.headerLeft}>
           <Text
             style={[
               s.headerTitle,
               {
-                color:
-                  colors.text,
+                color: colors.text,
               },
             ]}
           >
@@ -1212,9 +901,7 @@ export default function ApplicationScreen() {
             style={[
               s.countBadge,
               {
-                backgroundColor:
-                  colors.primary +
-                  '20',
+                backgroundColor: colors.primary + "20",
               },
             ]}
           >
@@ -1222,62 +909,42 @@ export default function ApplicationScreen() {
               style={[
                 s.countBadgeText,
                 {
-                  color:
-                    colors.primary,
+                  color: colors.primary,
                 },
               ]}
             >
-              {
-                applications.length
-              }
+              {applications.length}
             </Text>
           </View>
         </View>
 
-        {/* ═══════════════════════════════════════════════════════════════
-            ADD NEW
-        ═══════════════════════════════════════════════════════════════ */}
+        {/* ADD NEW */}
 
         <TouchableOpacity
           style={[
             s.addBtn,
             {
-              backgroundColor:
-                colors.primary,
+              backgroundColor: colors.primary,
             },
           ]}
           activeOpacity={0.6}
           onPress={handleAdd}
         >
-          <Ionicons
-            name="add-circle"
-            size={20}
-            color="#fff"
-          />
+          <Ionicons name="add-circle" size={20} color="#fff" />
 
-          <Text
-            style={
-              s.addBtnText
-            }
-          >
-            Add New
-          </Text>
+          <Text style={s.addBtnText}>Add New</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          SEARCH
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* SEARCH */}
 
       <View
         style={[
           s.searchRow,
           {
-            backgroundColor:
-              colors.card,
+            backgroundColor: colors.card,
 
-            borderBottomColor:
-              colors.border,
+            borderBottomColor: colors.border,
           },
         ]}
       >
@@ -1285,211 +952,128 @@ export default function ApplicationScreen() {
           style={[
             s.searchBox,
             {
-              backgroundColor:
-                colors.background,
+              backgroundColor: colors.background,
 
-              borderColor:
-                colors.border,
+              borderColor: colors.border,
             },
           ]}
         >
           <Ionicons
             name="search-outline"
             size={16}
-            color={
-              colors.textSecondary
-            }
+            color={colors.textSecondary}
           />
 
           <TextInput
             style={[
               s.searchInput,
               {
-                color:
-                  colors.text,
+                color: colors.text,
               },
             ]}
             placeholder="Search company or role…"
-            placeholderTextColor={
-              colors.textSecondary
-            }
+            placeholderTextColor={colors.textSecondary}
             value={search}
-            onChangeText={
-              setSearch
-            }
+            onChangeText={setSearch}
           />
 
-          {search.length >
-            0 && (
-            <TouchableOpacity
-              onPress={() =>
-                setSearch('')
-              }
-            >
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
               <Ionicons
                 name="close-circle"
                 size={16}
-                color={
-                  colors.textSecondary
-                }
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
           )}
         </View>
 
+        {/* SORT */}
+
         <TouchableOpacity
           style={[
             s.sortBtn,
             {
-              backgroundColor:
-                colors.background,
+              backgroundColor: colors.background,
 
-              borderColor:
-                colors.border,
+              borderColor: colors.border,
             },
           ]}
           onPress={() =>
-            setSort(prev =>
-              prev ===
-              'newest'
-                ? 'oldest'
-                : 'newest'
-            )
+            setSort((prev) => (prev === "newest" ? "oldest" : "newest"))
           }
         >
           <Ionicons
-            name={
-              sort === 'newest'
-                ? 'arrow-down'
-                : 'arrow-up'
-            }
+            name={sort === "newest" ? "arrow-down" : "arrow-up"}
             size={16}
-            color={
-              colors.textSecondary
-            }
+            color={colors.textSecondary}
           />
         </TouchableOpacity>
       </View>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          FILTERS
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* FILTERS */}
 
       <View
         style={[
           s.filtersWrap,
           {
-            backgroundColor:
-              colors.card,
+            backgroundColor: colors.card,
 
-            borderBottomColor:
-              colors.border,
+            borderBottomColor: colors.border,
           },
         ]}
       >
         <FlatList
           horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-          data={[
-            'all',
-            ...ALL_STATUSES,
-          ] as (
-            | AppStatus
-            | 'all'
-          )[]}
-          keyExtractor={item =>
-            item
-          }
+          showsHorizontalScrollIndicator={false}
+          data={["all", ...ALL_STATUSES] as (AppStatus | "all")[]}
+          keyExtractor={(item) => item}
           contentContainerStyle={{
             paddingHorizontal: 16,
             paddingVertical: 10,
             gap: 8,
           }}
-          renderItem={({
-            item: status,
-          }) => {
+          renderItem={({ item: status }) => {
             const cfg =
-              status ===
-              'all'
+              status === "all"
                 ? {
                     label: `All (${applications.length})`,
-                    color:
-                      colors.primary,
-                    bg:
-                      colors.primary +
-                      '20',
+                    color: colors.primary,
+                    bg: colors.primary + "20",
                   }
                 : {
-                    label: `${
-                      STATUS[
-                        status
-                      ].label
-                    } (${count(
-                      status
-                    )})`,
+                    label: `${STATUS[status].label} (${count(status)})`,
 
-                    color:
-                      STATUS[
-                        status
-                      ].color,
+                    color: STATUS[status].color,
 
-                    bg:
-                      STATUS[
-                        status
-                      ].bg,
+                    bg: STATUS[status].bg,
                   };
 
             return (
               <Pill
-                label={
-                  cfg.label
-                }
-                active={
-                  activeStatus ===
-                  status
-                }
-                color={
-                  cfg.color
-                }
+                label={cfg.label}
+                active={activeStatus === status}
+                color={cfg.color}
                 bg={cfg.bg}
-                colors={
-                  colors
-                }
-                onPress={() =>
-                  setActiveStatus(
-                    status
-                  )
-                }
+                colors={colors}
+                onPress={() => setActiveStatus(status)}
               />
             );
           }}
         />
       </View>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          CONTENT
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* CONTENT */}
 
       {error ? (
-        <View
-          style={
-            s.errorWrap
-          }
-        >
-          <Ionicons
-            name="cloud-offline-outline"
-            size={44}
-            color="#EF4444"
-          />
+        <View style={s.errorWrap}>
+          <Ionicons name="cloud-offline-outline" size={44} color="#EF4444" />
 
           <Text
             style={[
               s.errorTitle,
               {
-                color:
-                  colors.text,
+                color: colors.text,
               },
             ]}
           >
@@ -1500,8 +1084,7 @@ export default function ApplicationScreen() {
             style={[
               s.errorMsg,
               {
-                color:
-                  colors.textSecondary,
+                color: colors.textSecondary,
               },
             ]}
           >
@@ -1512,71 +1095,37 @@ export default function ApplicationScreen() {
             style={[
               s.retryBtn,
               {
-                backgroundColor:
-                  colors.primary,
+                backgroundColor: colors.primary,
               },
             ]}
-            onPress={() =>
-              fetchApplications()
-            }
+            onPress={() => fetchApplications()}
           >
-            <Ionicons
-              name="refresh-outline"
-              size={16}
-              color="#fff"
-            />
+            <Ionicons name="refresh-outline" size={16} color="#fff" />
 
-            <Text
-              style={
-                s.retryText
-              }
-            >
-              Retry
-            </Text>
+            <Text style={s.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : loading ? (
-        <Skeleton
-          colors={colors}
-        />
+        <Skeleton colors={colors} />
       ) : (
         <FlatList
-          style={
-            s.mainList
-          }
-          data={
-            filtered
-          }
-          keyExtractor={item =>
-            String(item.id)
-          }
+          style={s.mainList}
+          data={filtered}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={[
             s.list,
 
-            filtered.length ===
-              0 && {
+            filtered.length === 0 && {
               flex: 1,
             },
           ]}
-          showsVerticalScrollIndicator={
-            false
-          }
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={
-                refreshing
-              }
-              onRefresh={() =>
-                fetchApplications(
-                  true
-                )
-              }
-              tintColor={
-                colors.primary
-              }
-              colors={[
-                colors.primary,
-              ]}
+              refreshing={refreshing}
+              onRefresh={() => fetchApplications(true)}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
           }
           ItemSeparatorComponent={() => (
@@ -1586,71 +1135,40 @@ export default function ApplicationScreen() {
               }}
             />
           )}
-          ListEmptyComponent={
-            <Empty
-              colors={
-                colors
-              }
-              onAdd={
-                handleAdd
-              }
-            />
-          }
-          renderItem={({
-            item,
-          }) => (
+          ListEmptyComponent={<Empty colors={colors} onAdd={handleAdd} />}
+          renderItem={({ item }) => (
             <AppCard
               item={item}
-              colors={
-                colors
-              }
+              colors={colors}
               onPress={() =>
-                router.push(
-                  {
-                    pathname:
-                      '/(app)/applications/AddApplication',
+                router.push({
+                  pathname: "/(app)/applications/AddApplication",
 
-                    params: {
-                      applicationId:
-                        String(
-                          item.id
-                        ),
-                    },
-                  }
-                )
+                  params: {
+                    applicationId: String(item.id),
+                  },
+                })
               }
-              onSendEmail={() =>
-                handleSendEmail(
-                  item
-                )
-              }
+              onSendEmail={() => handleSendEmail(item)}
             />
           )}
         />
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          MOBILE FAB
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* MOBILE FAB */}
 
-      {Platform.OS !==
-        'web' && (
+      {Platform.OS !== "web" && (
         <TouchableOpacity
           style={[
             s.fab,
             {
-              backgroundColor:
-                colors.primary,
+              backgroundColor: colors.primary,
             },
           ]}
           activeOpacity={0.7}
           onPress={handleAdd}
         >
-          <Ionicons
-            name="add"
-            size={28}
-            color="#fff"
-          />
+          <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>
       )}
     </View>
@@ -1661,259 +1179,231 @@ export default function ApplicationScreen() {
 // STYLES
 // ─────────────────────────────────────────────────────────────────────────────
 
-const s =
-  StyleSheet.create({
-    screen: {
-      flex: 1,
-      position: 'relative',
+const s = StyleSheet.create({
+  screen: {
+    flex: 1,
+    position: "relative",
+  },
+
+  // HEADER
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    paddingHorizontal: 16,
+
+    paddingTop: Platform.OS === "ios" ? 56 : 16,
+
+    paddingBottom: 14,
+
+    borderBottomWidth: 1,
+
+    ...(Platform.OS === "web"
+      ? ({
+          pointerEvents: "auto",
+        } as any)
+      : {}),
+  },
+
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+
+    flexShrink: 1,
+  },
+
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+  },
+
+  countBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  // ADD BUTTON
+
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    gap: 5,
+
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+
+    borderRadius: 10,
+
+    flexShrink: 0,
+
+    ...(Platform.OS === "web"
+      ? ({
+          cursor: "pointer",
+          pointerEvents: "auto",
+          userSelect: "none",
+        } as any)
+      : {}),
+  },
+
+  addBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  // SEARCH
+
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 10,
+
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+
+    borderBottomWidth: 1,
+
+    position: "relative",
+    zIndex: 100,
+  },
+
+  searchBox: {
+    flex: 1,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 8,
+
+    borderWidth: 1,
+    borderRadius: 10,
+
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+  },
+
+  sortBtn: {
+    width: 40,
+    height: 40,
+
+    borderRadius: 10,
+    borderWidth: 1,
+
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // FILTERS
+
+  filtersWrap: {
+    borderBottomWidth: 1,
+
+    position: "relative",
+    zIndex: 50,
+  },
+
+  // LIST
+
+  mainList: {
+    flex: 1,
+
+    position: "relative",
+
+    zIndex: 1,
+  },
+
+  list: {
+    paddingTop: 16,
+    paddingBottom: 100,
+  },
+
+  // ERROR
+
+  errorWrap: {
+    flex: 1,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    padding: 40,
+
+    gap: 10,
+  },
+
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  errorMsg: {
+    fontSize: 13,
+    textAlign: "center",
+  },
+
+  retryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 8,
+
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+
+    borderRadius: 10,
+
+    marginTop: 8,
+  },
+
+  retryText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  // FAB
+
+  fab: {
+    position: "absolute",
+
+    bottom: 28,
+    right: 20,
+
+    width: 58,
+    height: 58,
+
+    borderRadius: 29,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    zIndex: 10,
+    elevation: 8,
+
+    shadowColor: "#000",
+
+    shadowOffset: {
+      width: 0,
+      height: 4,
     },
 
-    // ───────────────────────────────────────────────────────────────────────
-    // HEADER
-    // ───────────────────────────────────────────────────────────────────────
-
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent:
-        'space-between',
-
-      paddingHorizontal: 16,
-
-      paddingTop:
-        Platform.OS === 'ios'
-          ? 56
-          : 16,
-
-      paddingBottom: 14,
-
-      borderBottomWidth: 1,
-
-      ...(Platform.OS ===
-      'web'
-        ? ({
-            pointerEvents:
-              'auto',
-          } as any)
-        : {}),
-    },
-
-    headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-
-      flexShrink: 1,
-    },
-
-    headerTitle: {
-      fontSize: 22,
-      fontWeight: '800',
-    },
-
-    countBadge: {
-      paddingHorizontal: 9,
-      paddingVertical: 3,
-      borderRadius: 12,
-    },
-
-    countBadgeText: {
-      fontSize: 12,
-      fontWeight: '700',
-    },
-
-    // ───────────────────────────────────────────────────────────────────────
-    // ADD BUTTON
-    // ───────────────────────────────────────────────────────────────────────
-
-    addBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent:
-        'center',
-
-      gap: 5,
-
-      paddingHorizontal: 14,
-      paddingVertical: 9,
-
-      borderRadius: 10,
-
-      flexShrink: 0,
-
-      ...(Platform.OS ===
-      'web'
-        ? ({
-            cursor: 'pointer',
-            pointerEvents:
-              'auto',
-            userSelect: 'none',
-          } as any)
-        : {}),
-    },
-
-    addBtnText: {
-      color: '#fff',
-      fontSize: 14,
-      fontWeight: '700',
-    },
-
-    // ───────────────────────────────────────────────────────────────────────
-    // SEARCH
-    // ───────────────────────────────────────────────────────────────────────
-
-    searchRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-
-      gap: 10,
-
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-
-      borderBottomWidth: 1,
-
-      position: 'relative',
-      zIndex: 100,
-    },
-
-    searchBox: {
-      flex: 1,
-
-      flexDirection: 'row',
-      alignItems: 'center',
-
-      gap: 8,
-
-      borderWidth: 1,
-      borderRadius: 10,
-
-      paddingHorizontal: 12,
-      paddingVertical: 9,
-    },
-
-    searchInput: {
-      flex: 1,
-      fontSize: 14,
-    },
-
-    sortBtn: {
-      width: 40,
-      height: 40,
-
-      borderRadius: 10,
-      borderWidth: 1,
-
-      alignItems: 'center',
-      justifyContent:
-        'center',
-    },
-
-    // ───────────────────────────────────────────────────────────────────────
-    // FILTERS
-    // ───────────────────────────────────────────────────────────────────────
-
-    filtersWrap: {
-      borderBottomWidth: 1,
-
-      position: 'relative',
-      zIndex: 50,
-    },
-
-    // ───────────────────────────────────────────────────────────────────────
-    // LIST
-    // ───────────────────────────────────────────────────────────────────────
-
-    mainList: {
-      flex: 1,
-
-      position: 'relative',
-
-      zIndex: 1,
-    },
-
-    list: {
-      paddingTop: 16,
-      paddingBottom: 100,
-    },
-
-    // ───────────────────────────────────────────────────────────────────────
-    // ERROR
-    // ───────────────────────────────────────────────────────────────────────
-
-    errorWrap: {
-      flex: 1,
-
-      alignItems: 'center',
-      justifyContent:
-        'center',
-
-      padding: 40,
-
-      gap: 10,
-    },
-
-    errorTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-    },
-
-    errorMsg: {
-      fontSize: 13,
-      textAlign: 'center',
-    },
-
-    retryBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-
-      gap: 8,
-
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-
-      borderRadius: 10,
-
-      marginTop: 8,
-    },
-
-    retryText: {
-      color: '#fff',
-      fontSize: 14,
-      fontWeight: '600',
-    },
-
-    // ───────────────────────────────────────────────────────────────────────
-    // FAB
-    // ───────────────────────────────────────────────────────────────────────
-
-    fab: {
-      position: 'absolute',
-
-      bottom: 28,
-      right: 20,
-
-      width: 58,
-      height: 58,
-
-      borderRadius: 29,
-
-      alignItems: 'center',
-      justifyContent:
-        'center',
-
-      zIndex: 10,
-      elevation: 8,
-
-      shadowColor: '#000',
-
-      shadowOffset: {
-        width: 0,
-        height: 4,
-      },
-
-      shadowOpacity: 0.25,
-      shadowRadius: 10,
-    },
-
-  });
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+});

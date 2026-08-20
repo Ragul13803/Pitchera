@@ -5,7 +5,7 @@ import { Response, NextFunction, Request } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
 import * as googleService from "../services/google.service";
 import * as gmailService from "../services/gmail.service";
-import { sendSuccess, sendError } from "../utils/response";
+import { sendSuccess } from "../utils/response";
 import { env } from "../config/env";
 
 // ─── Initiate Gmail OAuth ─────────────────────────────────────────────────────

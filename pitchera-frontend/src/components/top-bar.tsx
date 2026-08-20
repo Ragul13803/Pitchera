@@ -1,17 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router, usePathname } from 'expo-router';
-import { useEffect, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router, usePathname } from "expo-router";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Avatar } from './ui/Avatar';
-import { useDeviceType } from '@/hooks/useDeviceType';
-import { useTheme } from '@/context/ThemeContext';
+import { Avatar } from "./ui/Avatar";
+import { useDeviceType } from "@/hooks/useDeviceType";
+import { useTheme } from "@/context/ThemeContext";
 
 type User = {
   id: number;
@@ -23,19 +18,19 @@ type User = {
 };
 
 function getTitle(pathname: string) {
-  if (pathname === '/') {
-    return 'Dashboard';
+  if (pathname === "/") {
+    return "Dashboard";
   }
 
-  if (pathname.startsWith('/applications')) {
-    return 'Applications';
+  if (pathname.startsWith("/applications")) {
+    return "Applications";
   }
 
-  if (pathname.startsWith('/profile')) {
-    return 'Profile';
+  if (pathname.startsWith("/profile")) {
+    return "Profile";
   }
 
-  return 'Dashboard';
+  return "Dashboard";
 }
 
 export function TopBar() {
@@ -44,16 +39,12 @@ export function TopBar() {
 
   const [user, setUser] = useState<User | null>(null);
 
-  const {
-    isMobile,
-    isTablet,
-    isDesktop,
-  } = useDeviceType();
+  const { isMobile, isTablet, isDesktop } = useDeviceType();
 
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const storedUser = await AsyncStorage.getItem('pitchera_user');
+        const storedUser = await AsyncStorage.getItem("pitchera_user");
 
         if (!storedUser) {
           return;
@@ -61,15 +52,12 @@ export function TopBar() {
 
         const parsedUser: User = JSON.parse(storedUser);
 
-        console.log('TopBar user:', parsedUser);
-        console.log('TopBar avatarUrl:', parsedUser.avatarUrl);
+        console.log("TopBar user:", parsedUser);
+        console.log("TopBar avatarUrl:", parsedUser.avatarUrl);
 
         setUser(parsedUser);
       } catch (error) {
-        console.error(
-          'Failed to load pitchera_user:',
-          error
-        );
+        console.error("Failed to load pitchera_user:", error);
       }
     };
 
@@ -77,8 +65,8 @@ export function TopBar() {
   }, []);
 
   const fullName = user
-    ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-    : 'User';
+    ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+    : "User";
 
   return (
     <View
@@ -103,12 +91,7 @@ export function TopBar() {
       </Text>
 
       {/* Right Actions */}
-      <View
-        style={[
-          styles.actions,
-          isMobile && styles.mobileActions,
-        ]}
-      >
+      <View style={[styles.actions, isMobile && styles.mobileActions]}>
         {/* Notifications */}
         <Pressable
           style={[
@@ -126,33 +109,27 @@ export function TopBar() {
 
         {/* Profile */}
         <Pressable
-          style={[
-            styles.profile,
-            isMobile && styles.mobileProfile,
-          ]}
-          onPress={() => router.push('/profile')}
+          style={[styles.profile, isMobile && styles.mobileProfile]}
+          onPress={() => router.push("/profile")}
         >
           {/* Google Profile Image */}
           <View
-  style={[
-    styles.avatar,
-    { backgroundColor: colors.primary + '20' },
-    isMobile && styles.mobileAvatar,
-  ]}
->
-  {user?.avatarUrl ? (
-    <Avatar
-      uri={user.avatarUrl}
-      size={isMobile ? 36 : 38}
-    />
-  ) : (
-    <Ionicons
-      name="person"
-      size={isMobile ? 19 : 21}
-      color={colors.primary}
-    />
-  )}
-</View>
+            style={[
+              styles.avatar,
+              { backgroundColor: colors.primary + "20" },
+              isMobile && styles.mobileAvatar,
+            ]}
+          >
+            {user?.avatarUrl ? (
+              <Avatar uri={user.avatarUrl} size={isMobile ? 36 : 38} />
+            ) : (
+              <Ionicons
+                name="person"
+                size={isMobile ? 19 : 21}
+                color={colors.primary}
+              />
+            )}
+          </View>
 
           {/* User Information - hidden on mobile */}
           {!isMobile && (
@@ -168,7 +145,7 @@ export function TopBar() {
                 style={[styles.role, { color: colors.textSecondary }]}
                 numberOfLines={1}
               >
-                {user?.email ?? ''}
+                {user?.email ?? ""}
               </Text>
             </View>
           )}
@@ -190,11 +167,11 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     marginRight: 10,
 
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
 
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 
   mobileContainer: {
@@ -202,7 +179,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
 
     marginVertical: 6,
-    marginRight: 6,
+    marginRight: 7,
+    marginLeft: 6,
   },
 
   tabletContainer: {
@@ -217,7 +195,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
 
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
   mobileTitle: {
@@ -225,8 +203,8 @@ const styles = StyleSheet.create({
   },
 
   actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 18,
   },
 
@@ -240,8 +218,8 @@ const styles = StyleSheet.create({
 
     borderRadius: 20,
 
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   mobileIconButton: {
@@ -252,8 +230,8 @@ const styles = StyleSheet.create({
   },
 
   profile: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
 
     gap: 10,
   },
@@ -268,10 +246,10 @@ const styles = StyleSheet.create({
 
     borderRadius: 20,
 
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
 
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 
   mobileAvatar: {
@@ -289,7 +267,7 @@ const styles = StyleSheet.create({
     maxWidth: 140,
 
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
   role: {

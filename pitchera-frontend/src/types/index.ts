@@ -31,10 +31,11 @@ export type AppStatus =
   | 'scheduled'
   | 'sent'
   | 'failed'
-  | 'interview'
-  | 'rejected'
-  | 'selected'
-  | 'offer';
+  // | 'interview'
+  // | 'rejected'
+  // | 'selected'
+  // | 'offer'
+  ;
 
 export interface ApplicationRecipient {
   name: string | null;
