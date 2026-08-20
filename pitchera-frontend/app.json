@@ -21,7 +21,7 @@
       "package": "com.ragul.pitchera"
     },
     "web": {
-      "output": "single",
+      "output": "static",
       "favicon": "./assets/images/pitchera_logo_circle.png"
     },
     "plugins": [
