@@ -15,7 +15,6 @@ import {
   TextInput,
   RefreshControl,
   Platform,
-  Alert,
 } from 'react-native';
 
 import { useRouter } from 'expo-router';
@@ -1111,22 +1110,10 @@ export default function ApplicationScreen() {
 
   const handleAdd =
     useCallback(() => {
-      console.log(
-        '🔥🔥🔥 handleAdd CALLED 🔥🔥🔥'
-      );
-
-      console.log(
-        '➡️ Navigating to AddApplication'
-      );
-
       router.push({
         pathname:
           '/(app)/applications/AddApplication',
       });
-
-      console.log(
-        '✅ router.push executed'
-      );
     }, [router]);
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -1260,22 +1247,7 @@ export default function ApplicationScreen() {
             },
           ]}
           activeOpacity={0.6}
-          onPress={() => {
-            console.log(
-              '🔥🔥🔥 ADD NEW PRESSED 🔥🔥🔥'
-            );
-
-            if (
-              Platform.OS ===
-              'web'
-            ) {
-              console.log(
-                '🌐 Add New pressed on WEB'
-              );
-            }
-
-            handleAdd();
-          }}
+          onPress={handleAdd}
         >
           <Ionicons
             name="add-circle"
@@ -1672,50 +1644,13 @@ export default function ApplicationScreen() {
             },
           ]}
           activeOpacity={0.7}
-          onPress={() => {
-            console.log(
-              '🔥 FAB PRESSED'
-            );
-
-            handleAdd();
-          }}
+          onPress={handleAdd}
         >
           <Ionicons
             name="add"
             size={28}
             color="#fff"
           />
-        </TouchableOpacity>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          TEMPORARY WEB DEBUG
-      ═══════════════════════════════════════════════════════════════════ */}
-
-      {Platform.OS ===
-        'web' && (
-        <TouchableOpacity
-          style={
-            s.webDebugButton
-          }
-          onPress={() => {
-            console.log(
-              '🟢 WEB DEBUG WORKS'
-            );
-
-            Alert.alert(
-              'Debug',
-              'Touch is working!'
-            );
-          }}
-        >
-          <Text
-            style={
-              s.webDebugText
-            }
-          >
-            DEBUG
-          </Text>
         </TouchableOpacity>
       )}
     </View>
@@ -1753,11 +1688,6 @@ const s =
       paddingBottom: 14,
 
       borderBottomWidth: 1,
-
-      // KEY FIX
-      position: 'relative',
-      zIndex: 10000,
-      elevation: 10000,
 
       ...(Platform.OS ===
       'web'
@@ -1808,11 +1738,6 @@ const s =
       paddingVertical: 9,
 
       borderRadius: 10,
-
-      // KEY FIX
-      position: 'relative',
-      zIndex: 999999,
-      elevation: 999999,
 
       flexShrink: 0,
 
@@ -1977,8 +1902,8 @@ const s =
       justifyContent:
         'center',
 
-      zIndex: 999999,
-      elevation: 999999,
+      zIndex: 10,
+      elevation: 8,
 
       shadowColor: '#000',
 
@@ -1991,38 +1916,4 @@ const s =
       shadowRadius: 10,
     },
 
-    // ───────────────────────────────────────────────────────────────────────
-    // DEBUG
-    // ───────────────────────────────────────────────────────────────────────
-
-    webDebugButton: {
-      position: 'absolute',
-
-      bottom: 20,
-      left: 20,
-
-      backgroundColor:
-        '#00AA00',
-
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-
-      borderRadius: 10,
-
-      zIndex: 9999999,
-      elevation: 9999999,
-
-      ...(Platform.OS ===
-      'web'
-        ? ({
-            cursor: 'pointer',
-          } as any)
-        : {}),
-    },
-
-    webDebugText: {
-      color: '#fff',
-      fontWeight: '800',
-      fontSize: 14,
-    },
   });

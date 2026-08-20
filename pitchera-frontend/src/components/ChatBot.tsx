@@ -23,6 +23,14 @@ const ChatBot: FC<Props> = () => {
   const { width, height } = useWindowDimensions();
 
   const [isOpen, setIsOpen] = useState(false);
+  // Whether the chat window is actually mounted. Kept true for the
+  // duration of the close animation, then flipped false so the window is
+  // fully removed from the tree (not just visually hidden) while closed —
+  // react-native-web's pointerEvents="none" is a CSS `pointer-events`
+  // value, which a descendant can still override back to `auto`, so a
+  // full-viewport "hidden" window was silently swallowing taps on every
+  // other button underneath it. Unmounting removes that risk entirely.
+  const [isMounted, setIsMounted] = useState(false);
   const [unread, setUnread] = useState(0);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -31,17 +39,22 @@ const ChatBot: FC<Props> = () => {
   const isTablet = width > 480 && width <= 900;
 
   useEffect(() => {
+    if (isOpen) {
+      setIsMounted(true);
+      setUnread(0);
+    }
+
     Animated.spring(slideAnim, {
       toValue: isOpen ? 1 : 0,
       useNativeDriver: true,
       damping: 20,
       stiffness: 190,
       mass: 0.75,
-    }).start();
-
-    if (isOpen) {
-      setUnread(0);
-    }
+    }).start(({ finished }) => {
+      if (finished && !isOpen) {
+        setIsMounted(false);
+      }
+    });
   }, [isOpen, slideAnim]);
 
   const desktopChatWidth = isTablet
@@ -79,34 +92,39 @@ const ChatBot: FC<Props> = () => {
     <View pointerEvents="box-none" style={styles.root}>
       {/* =====================================================
           CHAT WINDOW
+          Only mounted while open or animating closed — see the
+          isMounted comment above for why this can't just be an
+          always-mounted view toggling pointerEvents.
       ===================================================== */}
 
-      <Animated.View
-        pointerEvents={isOpen ? 'auto' : 'none'}
-        style={[
-          styles.chatContainer,
+      {isMounted && (
+        <Animated.View
+          pointerEvents={isOpen ? 'auto' : 'none'}
+          style={[
+            styles.chatContainer,
 
-          isMobile
-            ? [
-                styles.mobileChat,
-                {
-                  width,
-                  height,
+            isMobile
+              ? [
+                  styles.mobileChat,
+                  {
+                    width,
+                    height,
+                  },
+                ]
+              : {
+                  width: desktopChatWidth,
+                  height: desktopChatHeight,
                 },
-              ]
-            : {
-                width: desktopChatWidth,
-                height: desktopChatHeight,
-              },
 
-          {
-            opacity,
-            transform: [{ translateY }, { scale }],
-          },
-        ]}
-      >
-        <ChatWindow onClose={() => setIsOpen(false)} />
-      </Animated.View>
+            {
+              opacity,
+              transform: [{ translateY }, { scale }],
+            },
+          ]}
+        >
+          <ChatWindow onClose={() => setIsOpen(false)} />
+        </Animated.View>
+      )}
 
       {/* =====================================================
           FLOATING TOGGLE

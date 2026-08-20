@@ -208,6 +208,12 @@ const ChatToggle: FC<ToggleProps> = ({
     }).start();
   };
 
+  /*
+   * =========================================================
+   * ANIMATION INTERPOLATIONS
+   * =========================================================
+   */
+
   const scale1 = pulse1.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 1.65],
@@ -244,9 +250,20 @@ const ChatToggle: FC<ToggleProps> = ({
   });
 
   /*
-   * Mobile:
-   * hide toggle when chat is open.
+   * =========================================================
+   * MOBILE
+   *
+   * Hide toggle when chat is open.
+   * When visible, the ENTIRE toggle is moved up by 120px.
+   * This includes:
+   * - glow
+   * - pulse rings
+   * - button
+   * - unread badge
+   * - all animations
+   * =========================================================
    */
+
   if (isMobile && isOpen) {
     return null;
   }
@@ -257,6 +274,10 @@ const ChatToggle: FC<ToggleProps> = ({
         styles.wrapper,
         isMobile && styles.mobileWrapper,
         {
+          // Move the entire toggle up by 120px on mobile.
+          // Do this on the parent so every child moves together.
+          marginBottom: isMobile ? 70 : 0,
+
           transform: [
             { translateY: floatAnim },
             { scale: pressScale },
@@ -338,9 +359,7 @@ const ChatToggle: FC<ToggleProps> = ({
             style={[
               styles.closeIconWrapper,
               {
-                transform: [
-                  { rotate },
-                ],
+                transform: [{ rotate }],
               },
             ]}
           >
@@ -377,6 +396,12 @@ const ChatToggle: FC<ToggleProps> = ({
 };
 
 const styles = StyleSheet.create({
+  /*
+   * =========================================================
+   * WRAPPER
+   * =========================================================
+   */
+
   wrapper: {
     width: 82,
     height: 82,
@@ -391,8 +416,11 @@ const styles = StyleSheet.create({
   },
 
   /*
-   * Soft outer glow.
+   * =========================================================
+   * SOFT OUTER GLOW
+   * =========================================================
    */
+
   glow: {
     position: 'absolute',
 
@@ -415,8 +443,11 @@ const styles = StyleSheet.create({
   },
 
   /*
-   * Main button.
+   * =========================================================
+   * MAIN BUTTON
+   * =========================================================
    */
+
   button: {
     width: 64,
     height: 64,
@@ -457,6 +488,12 @@ const styles = StyleSheet.create({
     opacity: 0.96,
   },
 
+  /*
+   * =========================================================
+   * BOT IMAGE
+   * =========================================================
+   */
+
   imageContainer: {
     width: 56,
     height: 56,
@@ -479,9 +516,11 @@ const styles = StyleSheet.create({
   },
 
   /*
-   * The X now uses a fixed-size flex container,
-   * so it is mathematically centered.
+   * =========================================================
+   * CLOSE ICON
+   * =========================================================
    */
+
   closeIconWrapper: {
     width: 56,
     height: 56,
@@ -493,6 +532,12 @@ const styles = StyleSheet.create({
 
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
+
+  /*
+   * =========================================================
+   * UNREAD BADGE
+   * =========================================================
+   */
 
   badge: {
     position: 'absolute',
@@ -532,6 +577,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
   },
+
+  /*
+   * =========================================================
+   * PULSE RINGS
+   * =========================================================
+   */
 
   pulse: {
     position: 'absolute',
