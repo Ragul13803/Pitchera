@@ -16,6 +16,7 @@
     "@hookform/resolvers": "^3.9.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
+    "@uploadthing/expo": "^7.2.6",
     "babel-preset-expo": "~54.0.10",
     "expo": "~54.0.36",
     "expo-auth-session": "~7.0.11",
@@ -44,6 +45,7 @@
     "react-native-toast-message": "^2.4.0",
     "react-native-web": "0.21.0",
     "react-native-worklets": "0.5.1",
+    "uploadthing": "^7.7.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {

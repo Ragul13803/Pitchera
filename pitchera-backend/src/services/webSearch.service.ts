@@ -1,99 +1,72 @@
 // src/services/webSearch.service.ts
 //
-// Real web search for Google mode — no API key required. Fetches
-// DuckDuckGo's public HTML results page (html.duckduckgo.com/html/) and
-// parses real titles/URLs/snippets with cheerio. This is an unofficial,
-// keyless endpoint (not a documented API with an SLA) — the tradeoff for
-// needing zero signup/credentials.
+// Real web search for Google mode — no API key required.
 //
-// KNOWN FAILURE MODE (this is what broke in production): DuckDuckGo can
-// respond 200 OK with a bot-check/anomaly page instead of real results —
-// this happens far more often from shared/datacenter IPs (e.g. Render,
-// AWS, GCP) than from a home/dev IP, since those ranges are heavily used
-// by scrapers and get flagged. A 200 with zero `.result` elements used to
-// be silently treated as "no results found", which is indistinguishable
-// from a genuine empty search from the caller's point of view. This file
-// now explicitly detects that case, logs the raw signal, and throws a
-// distinct, loud error instead of returning an empty array.
+// ── WHY THIS FILE CHANGED ──
+// This used to scrape DuckDuckGo's HTML results page
+// (html.duckduckgo.com/html/) with cheerio. That page is meant for
+// browsers, not servers: DuckDuckGo now gates it behind an interactive
+// image CAPTCHA ("select all squares containing a duck") for automated
+// traffic. Confirmed live: the exact endpoint this file called returns
+// that CAPTCHA challenge, not a "no results" page, regardless of
+// User-Agent/headers/retries — from cloud IPs (like Render's) AND from
+// unrelated non-residential networks in general. No request-shaping can
+// solve an image CAPTCHA server-side, so scraping that page can never be
+// made reliable in production. It was not a config/env/CORS problem.
+//
+// This now calls two official, keyless, unlimited-for-reasonable-use JSON
+// APIs instead of scraping an HTML page:
+//   1. DuckDuckGo's Instant Answer API (api.duckduckgo.com) — a real,
+//      documented, bot-tolerant JSON endpoint (different from the HTML
+//      page above). Strong for "who/what is X" / company / person
+//      queries, backed mostly by Wikipedia's abstract data.
+//   2. Wikipedia's search API (en.wikipedia.org/w/api.php) — free,
+//      unlimited, no key, no CAPTCHA. Broadens coverage for general
+//      knowledge queries.
+//
+// KNOWN LIMITATION: neither source indexes the general web or job boards,
+// so job-listing queries (JOB_QUERY_PATTERN in googleSearch.service.ts)
+// will usually return few or no real openings — that is a genuine
+// capability gap of every free/unlimited/keyless search API, not a bug
+// here. A real job-search result set would require a paid/rate-limited
+// provider (Google Custom Search JSON API, Bing, SerpAPI, etc.).
 
-import * as cheerio from 'cheerio';
 import { WebSearchResult } from '../types/chat.types';
 
-const DDG_HTML_URL = 'https://html.duckduckgo.com/html/';
-const SEARCH_TIMEOUT_MS = 15_000;
-const USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
-
-// Substrings DuckDuckGo's bot-check / anomaly page is known to contain.
-// Checked case-insensitively against the raw HTML when zero results are
-// parsed, to distinguish "we got blocked" from "genuinely no results".
-const BLOCK_PAGE_MARKERS = [
-  'anomaly',
-  'unusual traffic',
-  'detected automated',
-  'automated requests',
-  'captcha',
-  'verify you are a human',
-  'access denied',
-  'blocked',
-];
-
-// DuckDuckGo's own legitimate "nothing matched your query" markers —
-// presence of these (with zero .result elements) means it's a real empty
-// search, not a block, so we should NOT throw in that case.
-const GENUINE_NO_RESULTS_MARKERS = [
-  'no results',
-  "didn't return any results",
-];
+const DDG_IA_URL = 'https://api.duckduckgo.com/';
+const WIKIPEDIA_URL = 'https://en.wikipedia.org/w/api.php';
+const SEARCH_TIMEOUT_MS = 10_000;
+const USER_AGENT = 'PitcheraApp/1.0 (+https://pitchera.netlify.app)';
 
 function log(...args: unknown[]) {
   console.log('[webSearch]', ...args);
 }
 
-/** DuckDuckGo's HTML results wrap outbound links in a /l/?uddg=<encoded> redirect. */
-function resolveResultUrl(href: string): string | null {
-  try {
-    const absolute = href.startsWith('//') ? `https:${href}` : href;
-    const url = new URL(absolute, 'https://duckduckgo.com');
-
-    if (url.hostname.endsWith('duckduckgo.com') && url.pathname === '/l/') {
-      const real = url.searchParams.get('uddg');
-      return real ? decodeURIComponent(real) : null;
-    }
-
-    return /^https?:\/\//i.test(absolute) ? absolute : null;
-  } catch {
-    return null;
-  }
+function stripHtml(input: string): string {
+  return input.replace(/<[^>]*>/g, '').trim();
 }
 
-export async function searchWeb(
-  query: string,
-  maxResults = 6,
-): Promise<WebSearchResult[]> {
+async function fetchJson(url: string, label: string): Promise<any> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS);
-
   const startedAt = Date.now();
 
   try {
     let response: Response;
     try {
-      response = await fetch(`${DDG_HTML_URL}?q=${encodeURIComponent(query)}`, {
+      response = await fetch(url, {
         method: 'GET',
-        headers: { 'User-Agent': USER_AGENT },
+        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
         signal: controller.signal,
       });
     } catch (networkErr: any) {
-      // Network-level failure (DNS, TLS, connection refused, egress
-      // blocked, abort/timeout) — never silently swallow this.
       log(
-        `NETWORK ERROR for query="${query}" after ${Date.now() - startedAt}ms:`,
+        `${label} NETWORK ERROR after ${Date.now() - startedAt}ms:`,
         networkErr.name,
         networkErr.message,
       );
       const err: any = new Error(
-        `Web search request failed: ${networkErr.name === 'AbortError' ? 'timed out' : networkErr.message}`,
+        `${label} request failed: ${networkErr.name === 'AbortError' ? 'timed out' : networkErr.message}`,
       );
       err.code = 'SEARCH_NETWORK_ERROR';
       err.cause = networkErr;
@@ -101,75 +74,112 @@ export async function searchWeb(
     }
 
     log(
-      `response for query="${query}": status=${response.status} ok=${response.ok} ` +
-        `content-type=${response.headers.get('content-type')} elapsedMs=${Date.now() - startedAt}`,
+      `${label} response: status=${response.status} ok=${response.ok} elapsedMs=${Date.now() - startedAt}`,
     );
 
     if (!response.ok) {
       const bodySnippet = await response.text().catch(() => '');
-      log(`non-OK response body snippet (first 300 chars):`, bodySnippet.slice(0, 300));
-      const err: any = new Error(
-        `Web search responded with ${response.status}: ${response.statusText}`,
-      );
+      log(`${label} non-OK body (first 300 chars):`, bodySnippet.slice(0, 300));
+      const err: any = new Error(`${label} responded with ${response.status}: ${response.statusText}`);
       err.status = response.status;
       err.code = 'SEARCH_HTTP_ERROR';
       throw err;
     }
 
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    const results: WebSearchResult[] = [];
-
-    $('.result').each((_, el) => {
-      if (results.length >= maxResults) return;
-
-      const titleEl = $(el).find('.result__title a.result__a').first();
-      const href = titleEl.attr('href');
-      const title = titleEl.text().trim();
-      if (!href || !title) return;
-
-      const url = resolveResultUrl(href);
-      if (!url) return;
-
-      const content = $(el).find('.result__snippet').first().text().trim();
-      results.push({ title, url, content });
-    });
-
-    log(
-      `parsed query="${query}": htmlLength=${html.length} resultElements=${$('.result').length} ` +
-        `usableResults=${results.length}`,
-    );
-
-    if (results.length === 0) {
-      const lowerHtml = html.toLowerCase();
-      const isGenuineEmpty = GENUINE_NO_RESULTS_MARKERS.some((m) => lowerHtml.includes(m));
-      const blockMarker = BLOCK_PAGE_MARKERS.find((m) => lowerHtml.includes(m));
-
-      if (!isGenuineEmpty && (blockMarker || html.length < 2000)) {
-        // Either an explicit bot-check marker was found, or the response
-        // is suspiciously short for a real results page (DDG's normal
-        // results page is tens of KB) — almost certainly a soft block,
-        // not a real empty search. Log the evidence and fail loudly
-        // instead of reporting "no results" as if the search succeeded.
-        log(
-          `SUSPECTED BLOCK/CAPTCHA for query="${query}": htmlLength=${html.length}, ` +
-            `matchedMarker=${blockMarker ?? '(none — html too short to be a real results page)'}`,
-        );
-        log(`blocked-response HTML snippet (first 500 chars):`, html.slice(0, 500));
-
-        const err: any = new Error(
-          'Web search appears to be blocked (received an unexpected page instead of search results). ' +
-            'This commonly happens when the search provider blocks requests from a hosting/datacenter IP.',
-        );
-        err.code = 'SEARCH_BLOCKED';
-        throw err;
-      }
-
-      log(`genuine zero-results for query="${query}" (no block markers found).`);
-    }
-
-    return results;
+    return response.json();
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchInstantAnswer(query: string): Promise<WebSearchResult[]> {
+  const url = `${DDG_IA_URL}?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+  const data = await fetchJson(url, 'DuckDuckGo Instant Answer');
+  const results: WebSearchResult[] = [];
+
+  if (data.AbstractText && data.AbstractURL) {
+    results.push({
+      title: data.Heading || query,
+      url: data.AbstractURL,
+      content: data.AbstractText,
+    });
+  }
+
+  const topics: any[] = Array.isArray(data.RelatedTopics) ? data.RelatedTopics : [];
+  for (const topic of topics) {
+    // RelatedTopics can nest a "Topics" group instead of being a leaf entry.
+    const entries = Array.isArray(topic.Topics) ? topic.Topics : [topic];
+    for (const entry of entries) {
+      if (entry.FirstURL && entry.Text) {
+        results.push({
+          title: entry.Text.split(' - ')[0].slice(0, 120),
+          url: entry.FirstURL,
+          content: entry.Text,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+async function fetchWikipedia(query: string, limit: number): Promise<WebSearchResult[]> {
+  const url =
+    `${WIKIPEDIA_URL}?action=query&list=search&format=json&srlimit=${limit}` +
+    `&srsearch=${encodeURIComponent(query)}`;
+  const data = await fetchJson(url, 'Wikipedia search');
+  const hits: any[] = data?.query?.search ?? [];
+
+  return hits.map((hit) => ({
+    title: hit.title,
+    url: `https://en.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g, '_'))}`,
+    content: stripHtml(hit.snippet || ''),
+  }));
+}
+
+export async function searchWeb(
+  query: string,
+  maxResults = 6,
+): Promise<WebSearchResult[]> {
+  const [instantAnswer, wikipedia] = await Promise.allSettled([
+    fetchInstantAnswer(query),
+    fetchWikipedia(query, maxResults),
+  ]);
+
+  if (instantAnswer.status === 'rejected') {
+    log(`Instant Answer source failed for query="${query}":`, instantAnswer.reason?.message);
+  }
+  if (wikipedia.status === 'rejected') {
+    log(`Wikipedia source failed for query="${query}":`, wikipedia.reason?.message);
+  }
+
+  // Both real sources failed outright (network/HTTP error) — a genuine
+  // provider-availability failure, not a "no results" case. Surface it
+  // loudly instead of returning an empty array as if the search succeeded.
+  if (instantAnswer.status === 'rejected' && wikipedia.status === 'rejected') {
+    const err: any = new Error(
+      `All web search sources failed: ${instantAnswer.reason?.message}; ${wikipedia.reason?.message}`,
+    );
+    err.code = instantAnswer.reason?.code || wikipedia.reason?.code || 'SEARCH_HTTP_ERROR';
+    throw err;
+  }
+
+  const combined = [
+    ...(instantAnswer.status === 'fulfilled' ? instantAnswer.value : []),
+    ...(wikipedia.status === 'fulfilled' ? wikipedia.value : []),
+  ];
+
+  const seen = new Set<string>();
+  const deduped = combined.filter((r) => {
+    if (seen.has(r.url)) return false;
+    seen.add(r.url);
+    return true;
+  });
+
+  log(
+    `query="${query}": instantAnswer=${instantAnswer.status} wikipedia=${wikipedia.status} ` +
+      `combined=${combined.length} deduped=${deduped.length}`,
+  );
+
+  return deduped.slice(0, maxResults);
 }

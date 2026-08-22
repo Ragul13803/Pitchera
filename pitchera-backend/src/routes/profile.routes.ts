@@ -1,10 +1,10 @@
 import { Router } from "express";
 import * as profileController from "../controllers/profile.controller";
 import { authenticate } from "../middleware/auth.middleware";
-import {
-  resumeUpload,
-  profilePhotoUpload,
-} from "../middleware/upload";
+// import {
+//   resumeUpload,
+//   profilePhotoUpload,
+// } from "../middleware/upload";
 
 const router = Router();
 
@@ -39,21 +39,21 @@ router.post("/certification", profileController.upsertCertification);
 router.put("/certification", profileController.upsertCertification);
 router.delete("/certification/:id", profileController.deleteCertification);
 
-// Resume
-router.post(
-  "/resume",
-  resumeUpload.single("resume"),
-  profileController.uploadResume
-);
-router.post("/resume/:resumeId/parse", profileController.parseResume);
-router.delete("/resume/:id", profileController.deleteResume);
-router.put("/resume/:id/primary", profileController.setPrimaryResume);
+// // Resume
+// router.post(
+//   "/resume",
+//   resumeUpload.single("resume"),
+//   profileController.uploadResume
+// );
+// router.post("/resume/:resumeId/parse", profileController.parseResume);
+// router.delete("/resume/:id", profileController.deleteResume);
+// router.put("/resume/:id/primary", profileController.setPrimaryResume);
 
 // Profile photo
-router.post(
-  "/photo",
-  profilePhotoUpload.single("photo"),
-  profileController.uploadProfilePhoto
-);
+// router.post(
+//   "/photo",
+//   profilePhotoUpload.single("photo"),
+//   profileController.uploadProfilePhoto
+// );
 
 export default router;

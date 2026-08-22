@@ -14,6 +14,7 @@ import gmailRoutes from "./routes/gmail.routes";
 import emailRoutes from "./routes/email.routes";
 import applicationRoutes from "./routes/applications.routes";
 import chatRoutes from "./routes/chat.routes";
+import resumeRoutes from "./routes/resume.routes";
 
 const app = express();
 
@@ -46,9 +47,12 @@ app.use(
  *
  * env.frontendUrl should be your deployed Netlify URL.
  */
+
 const allowedOrigins = [
   env.frontendUrl,
-  "https://pitchera.netlify.app/login",
+
+  // Production
+  "https://pitchera.netlify.app",
 
   // Local development
   "http://localhost:8082",
@@ -59,42 +63,65 @@ const allowedOrigins = [
 
 console.log("🌐 Allowed CORS origins:", allowedOrigins);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // React Native / native requests may not send Origin
-      if (!origin) {
-        return callback(null, true);
-      }
+const corsOptions = {
+  origin: (
+    origin: string | undefined,
+    callback: (error: Error | null, allow?: boolean) => void
+  ) => {
+    // React Native/native requests may not send Origin
+    if (!origin) {
+      return callback(null, true);
+    }
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-      console.log("❌ CORS blocked origin:", origin);
+    console.log("❌ CORS blocked origin:", origin);
 
-      return callback(
-        new Error(`CORS blocked: ${origin}`)
-      );
-    },
+    return callback(
+      new Error(`CORS blocked: ${origin}`)
+    );
+  },
 
-    credentials: true,
+  credentials: true,
 
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS",
-    ],
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ],
 
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-    ],
-  })
-);
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+
+    // UploadThing (ut-reporter.ts sets these on every client request,
+    // including the b3/traceparent trace-propagation headers — omitting
+    // either of the latter two fails preflight even though the
+    // x-uploadthing-* headers are already allowed)
+    "x-uploadthing-package",
+    "x-uploadthing-version",
+    "x-uploadthing-route",
+    "b3",
+    "traceparent",
+  ],
+
+  optionsSuccessStatus: 204,
+};
+
+/**
+ * Main CORS middleware
+ */
+app.use(cors(corsOptions));
+
+/**
+ * Explicit OPTIONS / preflight handling
+ */
+app.options("*", cors(corsOptions));
 
 /**
  * =========================================================
@@ -199,21 +226,47 @@ app.get("/health", (_req, res) => {
  */
 
 // Authentication
-app.use("/api/auth", authLimiter, authRoutes);
+app.use(
+  "/api/auth",
+  authLimiter,
+  authRoutes
+);
 
 // Profile
-app.use( "/api/profile", profileRoutes );
+app.use(
+  "/api/profile",
+  profileRoutes
+);
 
 // Gmail
-app.use( "/api/gmail", gmailRoutes );
+app.use(
+  "/api/gmail",
+  gmailRoutes
+);
 
 // Email
-app.use( "/api/emails", emailRoutes );
+app.use(
+  "/api/emails",
+  emailRoutes
+);
 
-app.use("/api/applications", applicationRoutes);
+// Applications
+app.use(
+  "/api/applications",
+  applicationRoutes
+);
 
-app.use('/api/chat', chatRoutes);
+// Chat
+app.use(
+  "/api/chat",
+  chatRoutes
+);
 
+// Resume
+app.use(
+  "/api/resume",
+  resumeRoutes
+);
 
 /**
  * =========================================================

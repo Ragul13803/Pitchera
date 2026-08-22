@@ -284,57 +284,6 @@ export async function deleteCertification(
   }
 }
 
-// Resume upload
-export async function uploadResume(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    if (!req.file) {
-      sendError(res, "No file uploaded", 400);
-      return;
-    }
-
-    const userId = req.user!.userId;
-    const file = req.file;
-
-    // Set as non-primary first, then set this one as primary
-    await pool.query(
-      "UPDATE resumes SET is_primary = 0 WHERE user_id = ?",
-      [userId]
-    );
-
-    const [result] = await pool.query<ResultSetHeader>(
-      `INSERT INTO resumes (user_id, original_filename, stored_filename, file_path, file_size, mime_type, is_primary)
-       VALUES (?, ?, ?, ?, ?, ?, 1)`,
-      [
-        userId,
-        file.originalname,
-        file.filename,
-        file.path,
-        file.size,
-        file.mimetype,
-      ]
-    );
-
-    sendSuccess(
-      res,
-      {
-        id: result.insertId,
-        originalFilename: file.originalname,
-        fileSize: file.size,
-        mimeType: file.mimetype,
-        isPrimary: true,
-      },
-      "Resume uploaded successfully",
-      201
-    );
-  } catch (error) {
-    next(error);
-  }
-}
-
 export async function parseResume(
   req: AuthRequest,
   res: Response,

@@ -61,13 +61,7 @@ export async function sendChatMessage(
      support your job search..." must never leak into a Google-mode call. */
   try {
     if (mode === 'google') {
-      console.log(`[chatController] google mode request: userId=${userId} query="${message.trim()}"`);
       const result = await performGoogleSearch(message.trim());
-      console.log(
-        `[chatController] google mode result: type=${result.type} ` +
-          `sources=${'sources' in result ? result.sources.length : 'n/a'} ` +
-          `jobs=${'jobs' in result ? result.jobs.length : 'n/a'}`,
-      );
 
       appendMessages(userId, message.trim(), result.answer, mode).catch((err) =>
         console.error('[chatController] Failed to persist chat history:', err),

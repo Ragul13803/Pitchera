@@ -103,18 +103,13 @@ async function answerJobQuery(
       source:     new URL(j.url).hostname.replace(/^www\./, ''),
     }));
 
-  // Fall back to raw results (still real URLs, just without LLM-extracted
-  // metadata) if extraction failed or the model returned nothing usable.
-  const finalJobs = jobs.length > 0
-    ? jobs
-    : results.slice(0, 5).map((r) => ({
-        title: r.title,
-        company: '',
-        location: '',
-        experience: '',
-        url: r.url,
-        source: new URL(r.url).hostname.replace(/^www\./, ''),
-      }));
+  // No raw-results fallback here: `results` now comes from knowledge
+  // sources (DuckDuckGo Instant Answer + Wikipedia), not a general web
+  // index, so an unmatched raw result is rarely an actual job posting —
+  // presenting it as one would be misleading rather than merely
+  // low-detail. If the model found nothing that matches a real result
+  // URL, that honestly means no job openings were found.
+  const finalJobs = jobs;
 
   return {
     type: 'jobs',
